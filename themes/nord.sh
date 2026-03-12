@@ -10,7 +10,7 @@
 # Blue              | Frost        | #81a1c1 | 110
 # Gold              | Aurora       | #ebcb8b | 222
 # Green             | Aurora       | #a3be8c | 144
-# Cyan              | Frost        | #88c0d0 | 110
+# Cyan              | Frost        | #88c0d0 | 116
 # Red               | Aurora       | #bf616a | 167
 # Orange            | Aurora       | #d08770 | 173
 # Magenta           | Aurora       | #b48ead | 139
@@ -23,7 +23,7 @@ PALETTE_BG_DIM=235
 PALETTE_BLUE=110
 PALETTE_GOLD=222
 PALETTE_GREEN=144
-PALETTE_CYAN=110
+PALETTE_CYAN=116
 PALETTE_RED=167
 PALETTE_ORANGE=173
 PALETTE_MAGENTA=139
