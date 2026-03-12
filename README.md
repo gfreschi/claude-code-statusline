@@ -4,7 +4,6 @@ A custom status line for [Claude Code](https://docs.anthropic.com/en/docs/claude
 
 Built entirely in POSIX `sh` -- no bash dependencies, no compiled binaries, works on any Unix terminal.
 
-<!-- TODO: Add screenshot here -->
 
 ## Features
 
@@ -28,7 +27,7 @@ Built entirely in POSIX `sh` -- no bash dependencies, no compiled binaries, work
 1. Clone the repository:
 
 ```sh
-git clone https://github.com/YOUR_USER/claude-statusline.git ~/.claude/statusline
+git clone https://github.com/gfreschi/claude-statusline.git ~/.claude/statusline
 ```
 
 2. Configure Claude Code to use it. Add to your `~/.claude/settings.json`:
@@ -172,6 +171,7 @@ segment_example() {
 |---------------------|---------|-------------|
 | `CLAUDE_STATUSLINE_THEME` | `catppuccin-mocha` | Theme name (filename without `.sh`) |
 | `CLAUDE_STATUSLINE_NERD_FONT` | `1` | Set to `0` to disable Nerd Font icons |
+| `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` | `95` | Context percentage at which compaction countdown targets |
 
 ## Testing
 
