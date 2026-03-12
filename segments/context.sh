@@ -37,55 +37,40 @@ segment_context() {
     fi
   fi
 
+  # --- Shared: dots, tokens, prefix (used by compact + full) ---
+  _cx_dots=""
+  _cx_tokens=""
+  _cx_prefix=""
+  _cx_size_val=$(( sl_ctx_size + 0 )) 2>/dev/null || _cx_size_val=0
+
+  if [ "$_sl_tier" != "micro" ]; then
+    _cx_filled=$(( _cx_pct / 20 ))
+    [ "$_cx_filled" -gt 5 ] && _cx_filled=5
+    _cx_empty=$(( 5 - _cx_filled ))
+    _cx_i=0; while [ "$_cx_i" -lt "$_cx_filled" ]; do _cx_dots="${_cx_dots}${GL_DOT_FILLED}"; _cx_i=$((_cx_i+1)); done
+    _cx_i=0; while [ "$_cx_i" -lt "$_cx_empty" ];  do _cx_dots="${_cx_dots}${GL_DOT_EMPTY}";  _cx_i=$((_cx_i+1)); done
+
+    if [ "$_cx_size_val" -gt 0 ]; then
+      _cx_used_tok=$(( _cx_size_val * _cx_pct / 100 ))
+      format_tokens _cx_used_fmt "$_cx_used_tok"
+      format_tokens _cx_max_fmt "$_cx_size_val"
+      _cx_tokens=" ${_cx_used_fmt}/${_cx_max_fmt}"
+    fi
+
+    [ "$_cx_pct" -ge 95 ] && _cx_prefix="${GL_WARN} CTX! "
+  fi
+
   # --- Build content by tier ---
   case "$_sl_tier" in
     micro)
-      # Just percentage
       _seg_content="${_cx_pct}%"
       _seg_icon=""
       ;;
     compact)
-      # Dots + % + tokens (no compaction ETA)
-      _cx_dots=""
-      _cx_filled=$(( _cx_pct / 20 ))
-      [ "$_cx_filled" -gt 5 ] && _cx_filled=5
-      _cx_empty=$(( 5 - _cx_filled ))
-      _cx_i=0; while [ "$_cx_i" -lt "$_cx_filled" ]; do _cx_dots="${_cx_dots}${GL_DOT_FILLED}"; _cx_i=$((_cx_i+1)); done
-      _cx_i=0; while [ "$_cx_i" -lt "$_cx_empty" ];  do _cx_dots="${_cx_dots}${GL_DOT_EMPTY}";  _cx_i=$((_cx_i+1)); done
-
-      _cx_tokens=""
-      _cx_size_val=$(( sl_ctx_size + 0 )) 2>/dev/null || _cx_size_val=0
-      if [ "$_cx_size_val" -gt 0 ]; then
-        _cx_used_tok=$(( _cx_size_val * _cx_pct / 100 ))
-        format_tokens _cx_used_fmt "$_cx_used_tok"
-        format_tokens _cx_max_fmt "$_cx_size_val"
-        _cx_tokens=" ${_cx_used_fmt}/${_cx_max_fmt}"
-      fi
-
-      _cx_prefix=""
-      [ "$_cx_pct" -ge 95 ] && _cx_prefix="${GL_WARN} CTX! "
-
       _seg_content="${_cx_prefix}${_cx_dots} ${_cx_pct}%${_cx_tokens}"
       ;;
     full|*)
-      # Dots + % + tokens + compaction ETA
-      _cx_dots=""
-      _cx_filled=$(( _cx_pct / 20 ))
-      [ "$_cx_filled" -gt 5 ] && _cx_filled=5
-      _cx_empty=$(( 5 - _cx_filled ))
-      _cx_i=0; while [ "$_cx_i" -lt "$_cx_filled" ]; do _cx_dots="${_cx_dots}${GL_DOT_FILLED}"; _cx_i=$((_cx_i+1)); done
-      _cx_i=0; while [ "$_cx_i" -lt "$_cx_empty" ];  do _cx_dots="${_cx_dots}${GL_DOT_EMPTY}";  _cx_i=$((_cx_i+1)); done
-
-      _cx_tokens=""
-      _cx_size_val=$(( sl_ctx_size + 0 )) 2>/dev/null || _cx_size_val=0
-      if [ "$_cx_size_val" -gt 0 ]; then
-        _cx_used_tok=$(( _cx_size_val * _cx_pct / 100 ))
-        format_tokens _cx_used_fmt "$_cx_used_tok"
-        format_tokens _cx_max_fmt "$_cx_size_val"
-        _cx_tokens=" ${_cx_used_fmt}/${_cx_max_fmt}"
-      fi
-
-      # Compaction countdown
+      # Compaction countdown (full tier only)
       _cx_compact=""
       _cx_compact_pct="${CLAUDE_AUTOCOMPACT_PCT_OVERRIDE:-95}"
       _cx_dur_val=$(( sl_duration_ms + 0 )) 2>/dev/null || _cx_dur_val=0
@@ -107,9 +92,6 @@ segment_context() {
           fi
         fi
       fi
-
-      _cx_prefix=""
-      [ "$_cx_pct" -ge 95 ] && _cx_prefix="${GL_WARN} CTX! "
 
       _seg_content="${_cx_prefix}${_cx_dots} ${_cx_pct}%${_cx_tokens}${_cx_compact}"
       ;;
