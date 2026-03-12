@@ -18,10 +18,15 @@ cache_refresh() {
   [ -z "$sl_cwd" ] && return
   git -C "$sl_cwd" rev-parse --git-dir >/dev/null 2>&1 || return
 
-  # Cache file path
+  # Cache directory: prefer $TMPDIR (per-user on macOS), fall back to /tmp with user ID
+  _cr_cache_dir="${TMPDIR:-/tmp}/claude-statusline-$(id -u)"
+  if [ ! -d "$_cr_cache_dir" ]; then
+    mkdir -p "$_cr_cache_dir" 2>/dev/null
+    chmod 700 "$_cr_cache_dir" 2>/dev/null
+  fi
   _cr_hash=$(printf '%s' "$sl_cwd" | $SL_MD5_CMD 2>/dev/null)
   _cr_hash="${_cr_hash%% *}"
-  _cr_cache="/tmp/claude-sl-${_cr_hash}"
+  _cr_cache="${_cr_cache_dir}/${_cr_hash}"
 
   # Check freshness
   if [ -f "$_cr_cache" ]; then
@@ -57,9 +62,9 @@ cache_refresh() {
     fi
   fi
 
-  # Stash
+  # Stash (arithmetic normalizes macOS wc -l leading spaces)
   sl_stash_count=$(git -C "$sl_cwd" stash list 2>/dev/null | wc -l)
-  sl_stash_count="${sl_stash_count## }"
+  sl_stash_count=$(( sl_stash_count + 0 ))
 
   # Remote URL -> GitHub base URL
   sl_remote_url=$(git -C "$sl_cwd" remote get-url origin 2>/dev/null)
@@ -84,15 +89,19 @@ cache_refresh() {
   fi
 
   # Write cache atomically
+  # String values: single-quote with proper escaping to prevent injection
+  # Numeric values: %d already sanitizes to digits only
   _cr_tmp="${_cr_cache}.$$"
+  _cr_sq_branch=$(printf '%s' "$sl_branch" | sed "s/'/'\\\\''/g")
+  _cr_sq_url=$(printf '%s' "$sl_github_base_url" | sed "s/'/'\\\\''/g")
   {
-    printf 'sl_branch="%s"\n' "$sl_branch"
+    printf "sl_branch='%s'\n" "$_cr_sq_branch"
     printf 'sl_is_detached=%d\n' "$sl_is_detached"
     printf 'sl_is_dirty=%d\n' "$sl_is_dirty"
     printf 'sl_ahead=%d\n' "$sl_ahead"
     printf 'sl_behind=%d\n' "$sl_behind"
     printf 'sl_stash_count=%d\n' "$sl_stash_count"
-    printf 'sl_github_base_url="%s"\n' "$sl_github_base_url"
+    printf "sl_github_base_url='%s'\n" "$_cr_sq_url"
   } > "$_cr_tmp"
   mv "$_cr_tmp" "$_cr_cache"
 }
