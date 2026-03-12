@@ -1,0 +1,55 @@
+#!/bin/sh
+# derive.sh -- Maps PALETTE_* base colors to C_* semantic tokens
+# Sources after a theme file. Each C_* uses ${VAR:-default} so themes
+# can override any specific token by setting it before this file runs.
+
+# --- Model tiers ---
+C_OPUS_BG=${C_OPUS_BG:-$PALETTE_GOLD}
+C_OPUS_FG=${C_OPUS_FG:-$PALETTE_BG}
+C_SONNET_BG=${C_SONNET_BG:-$PALETTE_BLUE}
+C_SONNET_FG=${C_SONNET_FG:-255}
+C_HAIKU_BG=${C_HAIKU_BG:-$PALETTE_CYAN}
+C_HAIKU_FG=${C_HAIKU_FG:-$PALETTE_BG}
+
+# --- Base UI ---
+C_BASE_BG=${C_BASE_BG:-$PALETTE_BG}
+C_BASE_FG=${C_BASE_FG:-$PALETTE_FG}
+C_MUTED_BG=${C_MUTED_BG:-$PALETTE_BG_ALT}
+C_DIM_BG=${C_DIM_BG:-$PALETTE_BG_DIM}
+C_DIM=${C_DIM:-$PALETTE_DIM}
+C_WHITE=${C_WHITE:-255}
+
+# --- Context gauge (BG/FG pairs per threshold) ---
+# 0-49%: healthy
+C_CTX_HEALTHY_BG=${C_CTX_HEALTHY_BG:-22}
+C_CTX_HEALTHY_FG=${C_CTX_HEALTHY_FG:-$PALETTE_GREEN}
+# 50-69%: warming
+C_CTX_WARMING_BG=${C_CTX_WARMING_BG:-$PALETTE_BG}
+C_CTX_WARMING_FG=${C_CTX_WARMING_FG:-$PALETTE_GOLD}
+# 70-84%: filling
+C_CTX_FILLING_BG=${C_CTX_FILLING_BG:-52}
+C_CTX_FILLING_FG=${C_CTX_FILLING_FG:-$PALETTE_ORANGE}
+# 85-94%: compaction soon
+C_CTX_SOON_BG=${C_CTX_SOON_BG:-52}
+C_CTX_SOON_FG=${C_CTX_SOON_FG:-$PALETTE_RED}
+# 95%+: critical
+C_CTX_CRIT_BG=${C_CTX_CRIT_BG:-52}
+C_CTX_CRIT_FG=${C_CTX_CRIT_FG:-$PALETTE_RED}
+
+# --- Duration escalation (FG only, on dim BG) ---
+C_DUR_LOW=${C_DUR_LOW:-$PALETTE_DIM}
+C_DUR_MED=${C_DUR_MED:-$PALETTE_FG}
+C_DUR_HIGH=${C_DUR_HIGH:-$PALETTE_ORANGE}
+C_DUR_CRIT=${C_DUR_CRIT:-$PALETTE_RED}
+
+# --- Lines delta (FG only) ---
+C_LINES_ADD=${C_LINES_ADD:-$PALETTE_GREEN}
+C_LINES_DEL=${C_LINES_DEL:-$PALETTE_RED}
+C_LINES_ZERO=${C_LINES_ZERO:-$PALETTE_GOLD}
+
+# --- Worktree ---
+C_WORKTREE_FG=${C_WORKTREE_FG:-$PALETTE_MAGENTA}
+
+# --- Cache stats ---
+C_CACHE_GOOD=${C_CACHE_GOOD:-$PALETTE_DIM}
+C_CACHE_POOR=${C_CACHE_POOR:-$PALETTE_ORANGE}
