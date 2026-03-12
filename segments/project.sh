@@ -13,7 +13,8 @@ segment_project() {
   _seg_bg=$C_MUTED_BG
   _seg_fg=$C_BASE_FG
 
-  _seg_content=$(osc8_link "$sl_github_base_url" "$sl_project")
+  _seg_content="$sl_project"
+  _seg_link_url="$sl_github_base_url"
 
   return 0
 }

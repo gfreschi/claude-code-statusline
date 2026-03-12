@@ -9,7 +9,6 @@ detect_capabilities() {
   SL_CAP_NERD="${CLAUDE_STATUSLINE_NERD_FONT:-1}"
 
   # Unicode: check locale
-  SL_CAP_UNICODE=1
   case "${LANG:-}${LC_ALL:-}${LC_CTYPE:-}" in
     *[Uu][Tt][Ff]*) SL_CAP_UNICODE=1 ;;
     *)              SL_CAP_UNICODE=0 ;;
@@ -203,7 +202,7 @@ render_row() {
     # Reset segment metadata
     _seg_weight="" ; _seg_min_tier="" ; _seg_group=""
     _seg_content="" ; _seg_icon="" ; _seg_bg="" ; _seg_fg=""
-    _seg_attrs="" ; _seg_detail=""
+    _seg_attrs="" ; _seg_detail="" ; _seg_link_url=""
 
     # Call segment function -- skip if returns non-zero
     "$_seg_fn" || continue
@@ -224,6 +223,11 @@ render_row() {
     _rr_icon=""
     if [ "$SL_CAP_NERD" -eq 1 ] && [ -n "$_seg_icon" ] && [ "$_sl_tier" != "micro" ]; then
       _rr_icon="${_seg_icon} "
+    fi
+
+    # OSC 8 link wrapping (orchestrator applies, not segments)
+    if [ "$SL_CAP_OSC8" -eq 1 ] && [ -n "$_seg_link_url" ]; then
+      _seg_content=$(printf '\033]8;;%s\a%s\033]8;;\a' "$_seg_link_url" "$_seg_content")
     fi
 
     # Attribute handling (bold, blink)
