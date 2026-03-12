@@ -1,4 +1,4 @@
-# claude-statusline
+# claude-code-statusline
 
 A custom status line for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with swappable themes, adaptive layout, and Powerline-style rendering.
 
@@ -27,7 +27,7 @@ Built entirely in POSIX `sh` -- no bash dependencies, no compiled binaries, work
 1. Clone the repository:
 
 ```sh
-git clone https://github.com/gfreschi/claude-statusline.git ~/.claude/statusline
+git clone https://github.com/gfreschi/claude-code-statusline.git ~/.claude/statusline
 ```
 
 2. Configure Claude Code to use it. Add to your `~/.claude/settings.json`:
@@ -109,7 +109,7 @@ C_CTX_FILLING_BG=52     # dark red instead of derived value
 ## Architecture
 
 ```
-claude-statusline/
+claude-code-statusline/
   main.sh             # Entry point: JSON stdin -> ANSI rows
   theme.sh            # Theme orchestrator (loads theme + derive)
   derive.sh           # Maps 12 PALETTE_* -> ~30 C_* semantic tokens

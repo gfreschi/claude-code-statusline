@@ -19,7 +19,7 @@ cache_refresh() {
   git -C "$sl_cwd" rev-parse --git-dir >/dev/null 2>&1 || return
 
   # Cache directory: prefer $TMPDIR (per-user on macOS), fall back to /tmp with user ID
-  _cr_cache_dir="${TMPDIR:-/tmp}/claude-statusline-$(id -u)"
+  _cr_cache_dir="${TMPDIR:-/tmp}/claude-code-statusline-$(id -u)"
   if [ ! -d "$_cr_cache_dir" ]; then
     mkdir -p "$_cr_cache_dir" 2>/dev/null
     chmod 700 "$_cr_cache_dir" 2>/dev/null
