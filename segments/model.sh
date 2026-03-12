@@ -27,10 +27,17 @@ segment_model() {
   # Tier-aware content
   case "$_sl_tier" in
     micro)
-      # Abbreviate: "Opus 4.6" -> "Op 4.6", "Sonnet 4.6" -> "So 4.6"
-      _m_name="${sl_model_short%% *}"
-      _m_ver="${sl_model_short#* }"
-      _seg_content="$(printf '%.2s' "$_m_name") ${_m_ver}"
+      # Abbreviate: "Opus 4.6" -> "Op 4.6"; single words pass through
+      case "$sl_model_short" in
+        *" "*)
+          _m_name="${sl_model_short%% *}"
+          _m_ver="${sl_model_short#* }"
+          _seg_content="$(printf '%.2s' "$_m_name") ${_m_ver}"
+          ;;
+        *)
+          _seg_content="$sl_model_short"
+          ;;
+      esac
       ;;
     *)
       _seg_content="$sl_model_short"
