@@ -12,3 +12,6 @@ Thumbs.db
 # Backup files
 *.bak
 *.orig
+
+# VHS temp files
+images/.tmp-*

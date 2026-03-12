@@ -11,6 +11,8 @@ Built entirely in POSIX `sh` -- no bash dependencies, no compiled binaries.
 
 </div>
 
+![Layout tiers](images/tiers.png)
+
 ---
 
 ## Why?
@@ -105,6 +107,8 @@ Row 2: [Project | Git branch + details | Lines | Worktree]>[Duration]>
 ---
 
 ## Themes
+
+![Bundled themes](images/themes.png)
 
 Four bundled themes. Set via environment variable:
 

@@ -1,0 +1,15 @@
+#!/bin/sh
+# Helper script for VHS screenshots -- renders tiers cleanly
+DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+json='{"cwd":"/Users/test/dev/myproject","model":{"id":"claude-opus-4-6","display_name":"Claude Opus 4.6"},"context_window":{"used_percentage":52,"context_window_size":200000,"current_usage":{"input_tokens":80000,"output_tokens":12000,"cache_creation_input_tokens":10000,"cache_read_input_tokens":50000},"total_input_tokens":104000,"total_output_tokens":20000},"cost":{"total_duration_ms":300000,"total_lines_added":56,"total_lines_removed":12},"exceeds_200k_tokens":false,"agent":{"name":"code-reviewer"}}'
+
+clear
+printf '\033[1;97m Full tier (>= 120 cols)\033[0m\n'
+echo "$json" | COLUMNS=140 sh "$DIR/main.sh"
+printf '\n'
+printf '\033[1;97m Compact tier (80-119 cols)\033[0m\n'
+echo "$json" | COLUMNS=100 sh "$DIR/main.sh"
+printf '\n'
+printf '\033[1;97m Micro tier (< 80 cols)\033[0m\n'
+echo "$json" | COLUMNS=60 sh "$DIR/main.sh"
