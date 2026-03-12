@@ -12,6 +12,3 @@ Thumbs.db
 # Backup files
 *.bak
 *.orig
-
-# Git cache temp files
-/tmp/
