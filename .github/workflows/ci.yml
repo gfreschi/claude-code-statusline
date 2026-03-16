@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax check (sh -n)
+        run: |
+          fail=0
+          for f in $(find . -name '*.sh' -not -path './.git/*'); do
+            if ! sh -n "$f"; then
+              echo "FAIL: $f"
+              fail=1
+            fi
+          done
+          exit $fail
+
+      - name: Bashism scan
+        run: |
+          fail=0
+          for f in $(find . -name '*.sh' -not -path './.git/*'); do
+            matches=$(grep -nE '\[\[|\blocal\b|\bdeclare\b|<\(|>\(' "$f" || true)
+            if [ -n "$matches" ]; then
+              echo "Bashism found in $f:"
+              echo "$matches"
+              fail=1
+            fi
+          done
+          exit $fail
+
+  test:
+    name: Test (${{ matrix.shell }})
+    needs: lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shell: [dash, bash, zsh]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq ${{ matrix.shell }}
+
+      - name: Run tests under ${{ matrix.shell }}
+        run: sh test/run.sh --check --shell ${{ matrix.shell }}
