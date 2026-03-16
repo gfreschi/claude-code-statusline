@@ -76,7 +76,7 @@ Add to `~/.claude/settings.json`:
 The layout adjusts automatically based on terminal width:
 
 <p align="center">
-  <img src="images/tiers.png" alt="Layout tiers" width="800">
+  <img src="images/tiers.gif" alt="Layout tiers" width="800">
 </p>
 
 | Tier | Width | Layout |
@@ -88,7 +88,7 @@ The layout adjusts automatically based on terminal width:
 ## Themes
 
 <p align="center">
-  <img src="images/themes.png" alt="Bundled themes" width="800">
+  <img src="images/themes.gif" alt="Bundled themes" width="800">
 </p>
 
 Four bundled themes. Set via environment variable:

@@ -1,9 +1,9 @@
-Output images/.tmp-tiers.gif
+Output images/tiers.gif
 
 Set FontFamily "JetBrainsMono Nerd Font"
 Set FontSize 18
 Set Width 1200
-Set Height 480
+Set Height 280
 Set Padding 20
 Set MarginFill "#1e1e2e"
 Set WindowBar "Colorful"
@@ -29,4 +29,4 @@ Enter
 Sleep 500ms
 Type "sh images/render-tiers.sh"
 Enter
-Sleep 5s
+Sleep 11s
