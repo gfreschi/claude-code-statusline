@@ -54,9 +54,8 @@ do_install() {
     echo "Created $SETTINGS_FILE"
   else
     _di_current=$(jq -r '.statusLine // empty' "$SETTINGS_FILE" 2>/dev/null)
+    _di_tmp="${SETTINGS_FILE}.tmp.$$"
     if [ -z "$_di_current" ]; then
-      # No statusLine key -- add it
-      _di_tmp="${SETTINGS_FILE}.tmp.$$"
       jq --arg cmd "$STATUSLINE_CMD" '. + {statusLine: $cmd}' "$SETTINGS_FILE" > "$_di_tmp"
       mv "$_di_tmp" "$SETTINGS_FILE"
       echo "Added statusLine to $SETTINGS_FILE"
@@ -65,7 +64,6 @@ do_install() {
     else
       echo "Current statusLine: $_di_current"
       if [ "$_is_force" -eq 1 ] || confirm "Replace with '$STATUSLINE_CMD'?"; then
-        _di_tmp="${SETTINGS_FILE}.tmp.$$"
         jq --arg cmd "$STATUSLINE_CMD" '.statusLine = $cmd' "$SETTINGS_FILE" > "$_di_tmp"
         mv "$_di_tmp" "$SETTINGS_FILE"
         echo "Updated statusLine in $SETTINGS_FILE"
@@ -99,13 +97,10 @@ do_update() {
 
 do_uninstall() {
   if [ -f "$SETTINGS_FILE" ]; then
-    _ui_has_key=$(jq 'has("statusLine")' "$SETTINGS_FILE" 2>/dev/null)
-    if [ "$_ui_has_key" = "true" ]; then
-      _ui_tmp="${SETTINGS_FILE}.tmp.$$"
-      jq 'del(.statusLine)' "$SETTINGS_FILE" > "$_ui_tmp"
-      mv "$_ui_tmp" "$SETTINGS_FILE"
-      echo "Removed statusLine from $SETTINGS_FILE"
-    fi
+    _ui_tmp="${SETTINGS_FILE}.tmp.$$"
+    jq 'del(.statusLine)' "$SETTINGS_FILE" > "$_ui_tmp"
+    mv "$_ui_tmp" "$SETTINGS_FILE"
+    echo "Removed statusLine from $SETTINGS_FILE"
   fi
 
   if [ -d "$INSTALL_DIR" ]; then

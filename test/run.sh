@@ -42,8 +42,7 @@ done
 # --- Visual mode ---
 run_visual() {
   _rv_scenarios="${_tr_scenario:-$ALL_SCENARIOS}"
-  _rv_theme_export=""
-  [ -n "$_tr_theme" ] && _rv_theme_export="$_tr_theme"
+  _rv_theme="${_tr_theme:-catppuccin-mocha}"
 
   for _rv_scn in $_rv_scenarios; do
     _rv_fixture="$DIR/fixtures/${_rv_scn}.json"
@@ -53,18 +52,13 @@ run_visual() {
     fi
     _rv_json=$(cat "$_rv_fixture")
 
-    _rv_display_theme="${_rv_theme_export:-catppuccin-mocha}"
-    echo "=== Scenario: $_rv_scn | Theme: $_rv_display_theme ==="
+    echo "=== Scenario: $_rv_scn | Theme: $_rv_theme ==="
     echo ""
 
     for _rv_tier in $TIERS; do
       eval "_rv_cols=\$TIER_COLS_${_rv_tier}"
       echo "--- ${_rv_tier} tier (COLUMNS=${_rv_cols}) ---"
-      if [ -n "$_rv_theme_export" ]; then
-        echo "$_rv_json" | COLUMNS="$_rv_cols" CLAUDE_STATUSLINE_THEME="$_rv_theme_export" "$_tr_shell" "$PROJECT_ROOT/main.sh"
-      else
-        echo "$_rv_json" | COLUMNS="$_rv_cols" "$_tr_shell" "$PROJECT_ROOT/main.sh"
-      fi
+      echo "$_rv_json" | COLUMNS="$_rv_cols" CLAUDE_STATUSLINE_THEME="$_rv_theme" "$_tr_shell" "$PROJECT_ROOT/main.sh"
       echo ""
     done
   done
@@ -114,12 +108,13 @@ run_check() {
         fi
 
         # Assert: no raw _seg_ variable leaks (assignment form)
-        _rc_leak=$(printf '%s' "$_rc_output" | grep -c '_seg_weight=\|_seg_content=\|_seg_bg=\|_seg_fg=\|_seg_icon=')
-        if [ "$_rc_leak" -gt 0 ]; then
-          echo "FAIL [$_rc_label]: _seg_ variable leak in output"
-          _rc_fail=$(( _rc_fail + 1 ))
-          continue
-        fi
+        case "$_rc_output" in
+          *_seg_weight=*|*_seg_content=*|*_seg_bg=*|*_seg_fg=*|*_seg_icon=*)
+            echo "FAIL [$_rc_label]: _seg_ variable leak in output"
+            _rc_fail=$(( _rc_fail + 1 ))
+            continue
+            ;;
+        esac
 
         echo "PASS [$_rc_label]"
         _rc_pass=$(( _rc_pass + 1 ))

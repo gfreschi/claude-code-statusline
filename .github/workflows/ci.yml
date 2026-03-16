@@ -16,7 +16,7 @@ jobs:
       - name: Syntax check (sh -n)
         run: |
           fail=0
-          for f in $(find . -name '*.sh' -not -path './.git/*'); do
+          find . -name '*.sh' -not -path './.git/*' -print0 | while IFS= read -r -d '' f; do
             if ! sh -n "$f"; then
               echo "FAIL: $f"
               fail=1
@@ -27,7 +27,7 @@ jobs:
       - name: Bashism scan
         run: |
           fail=0
-          for f in $(find . -name '*.sh' -not -path './.git/*'); do
+          find . -name '*.sh' -not -path './.git/*' -print0 | while IFS= read -r -d '' f; do
             matches=$(grep -nE '\[\[|^[[:space:]]*local |^[[:space:]]*declare ' "$f" || true)
             if [ -n "$matches" ]; then
               echo "Bashism found in $f:"
