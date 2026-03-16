@@ -91,7 +91,7 @@ do_update() {
     _du_date=$(git -C "$INSTALL_DIR" log -1 --format=%cs)
     echo "Updated to ${_du_hash} (${_du_date}). Restart Claude Code to apply changes."
   else
-    die "Update failed (local changes or diverged history). Resolve manually: cd $INSTALL_DIR && git status"
+    die "Update failed (uncommitted changes or diverged history). Resolve manually: cd $INSTALL_DIR && git status"
   fi
 }
 
