@@ -4,18 +4,18 @@
 # Theme selection: CLAUDE_STATUSLINE_THEME env var (default: catppuccin-mocha)
 
 _sl_theme="${CLAUDE_STATUSLINE_THEME:-catppuccin-mocha}"
-_sl_theme_file="$SL_DIR/themes/${_sl_theme}.sh"
+_sl_theme_file="$SL_LIB/themes/${_sl_theme}.sh"
 
 # Fallback to default if theme file not found
 if [ ! -f "$_sl_theme_file" ]; then
-  _sl_theme_file="$SL_DIR/themes/catppuccin-mocha.sh"
+  _sl_theme_file="$SL_LIB/themes/catppuccin-mocha.sh"
 fi
 
 # Load theme (sets PALETTE_* and optional C_* overrides)
 . "$_sl_theme_file"
 
 # Derive semantic tokens from palette
-. "$SL_DIR/derive.sh"
+. "$SL_LIB/derive.sh"
 
 # ANSI control constants (theme-independent)
 # Prefixed with SL_ to avoid collision with C_DIM (256-color value)
