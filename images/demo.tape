@@ -3,7 +3,7 @@ Output images/demo.gif
 Set FontFamily "JetBrainsMono Nerd Font"
 Set FontSize 18
 Set Width 1200
-Set Height 340
+Set Height 600
 Set Padding 20
 Set MarginFill "#1e1e2e"
 Set WindowBar "Colorful"
@@ -29,4 +29,4 @@ Enter
 Sleep 500ms
 Type "sh images/render-demo.sh"
 Enter
-Sleep 30s
+Sleep 35s
