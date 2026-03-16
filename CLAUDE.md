@@ -33,13 +33,15 @@ Claude Code -> stdin (JSON) -> main.sh -> stdout (ANSI rows)
 | File | Role |
 |------|------|
 | `main.sh` | Entry point: JSON parsing, tier detection, row assembly |
-| `theme.sh` | Orchestrator: loads theme via `CLAUDE_STATUSLINE_THEME` env var, sources `derive.sh`, sets `SL_*` ANSI constants |
-| `derive.sh` | Maps 12 `PALETTE_*` variables to ~30 `C_*` semantic tokens via `${VAR:-default}` pattern |
-| `lib.sh` | Rendering engine: `emit_segment()`, `emit_on_muted()`, `emit_recessed()`, `emit_thin_sep()`, `emit_end()`, `render_row()` orchestrator, capability detection, glyph definitions |
-| `cache.sh` | Git state cache with 5s TTL using per-user temp directory (`$TMPDIR`) |
-| `themes/*.sh` | Theme files defining 12 `PALETTE_*` vars + optional `C_*` overrides |
-| `segments/*.sh` | Each defines a `segment_*()` function returning metadata via `_seg_*` variables |
-| `test.sh` | Test harness: 4 scenarios x 3 tiers x 4 themes |
+| `lib/theme.sh` | Orchestrator: loads theme via `CLAUDE_STATUSLINE_THEME` env var, sources `derive.sh`, sets `SL_*` ANSI constants |
+| `lib/derive.sh` | Maps 12 `PALETTE_*` variables to ~30 `C_*` semantic tokens via `${VAR:-default}` pattern |
+| `lib/render.sh` | Rendering engine: `emit_segment()`, `emit_on_muted()`, `emit_recessed()`, `emit_thin_sep()`, `emit_end()`, `render_row()` orchestrator, capability detection, glyph definitions |
+| `lib/cache.sh` | Git state cache with 5s TTL using per-user temp directory (`$TMPDIR`) |
+| `lib/themes/*.sh` | Theme files defining 12 `PALETTE_*` vars + optional `C_*` overrides |
+| `lib/segments/*.sh` | Each defines a `segment_*()` function returning metadata via `_seg_*` variables |
+| `install.sh` | Lifecycle manager: install, update, uninstall |
+| `test/run.sh` | Test harness: visual + check modes, --shell flag for multi-shell testing |
+| `test/fixtures/*.json` | JSON scenario payloads: minimal, mid, full, critical |
 
 ### Three-Tier Adaptive Layout
 
@@ -99,6 +101,7 @@ Themes define 12 `PALETTE_*` variables. `derive.sh` maps them to ~30 `C_*` seman
 | `PALETTE_*` | Base palette (set by theme files) | `PALETTE_BLUE=111` |
 | `C_*` | Semantic color tokens (set by `derive.sh`) | `C_OPUS_BG`, `C_CTX_HEALTHY_FG` |
 | `SL_*` | ANSI control constants (set by `theme.sh`) | `SL_DIM`, `SL_BOLD` |
+| `SL_LIB` | Internal path | `$SL_DIR/lib` -- base path for sourcing lib/ modules |
 | `SL_CAP_*` | Capability flags | `SL_CAP_NERD`, `SL_CAP_OSC8` |
 | `GL_*` | Glyph variables | `GL_POWERLINE`, `GL_BRANCH` |
 | `sl_*` | Runtime state from JSON or git cache | `sl_model_id`, `sl_branch` |
@@ -138,26 +141,29 @@ Set by `cache.sh` via `cache_refresh`. Available to segments:
 
 ```sh
 # Run a scenario (minimal, mid, full, critical) across all 3 tiers:
-sh test.sh full
+sh test/run.sh --scenario full
 
 # Specify a theme:
-sh test.sh full dracula
+sh test/run.sh --scenario full --theme dracula
 
-# Test all scenarios:
-for s in minimal mid full critical; do sh test.sh "$s"; done
+# Test all scenarios (visual):
+sh test/run.sh
 
-# Test all themes:
-for t in catppuccin-mocha bluloco-dark dracula nord; do sh test.sh mid "$t"; done
+# CI assertions (all scenarios x tiers x themes):
+sh test/run.sh --check
+
+# CI: test under a specific shell:
+sh test/run.sh --check --shell dash
 
 # Syntax check all files:
-find . -name '*.sh' -print0 | xargs -0 -I{} sh -c 'sh -n "$1" || echo "FAIL: $1"' _ {}
+find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 -I{} sh -c 'sh -n "$1" || echo "FAIL: $1"' _ {}
 
 # Check for bashisms:
 grep -rn '\[\[' --include='*.sh' .
 grep -rn '^[[:space:]]*local ' --include='*.sh' .
 
 # Validate all semantic tokens for a theme:
-CLAUDE_STATUSLINE_THEME=dracula SL_DIR=. sh -c '. ./theme.sh
+CLAUDE_STATUSLINE_THEME=dracula SL_DIR=. SL_LIB=./lib sh -c '. ./lib/theme.sh
   for var in C_OPUS_BG C_OPUS_FG C_SONNET_BG C_SONNET_FG C_HAIKU_BG C_HAIKU_FG \
     C_BASE_BG C_BASE_FG C_MUTED_BG C_DIM_BG C_DIM C_WHITE \
     C_CTX_HEALTHY_BG C_CTX_HEALTHY_FG C_CTX_WARMING_BG C_CTX_WARMING_FG \
@@ -170,18 +176,18 @@ CLAUDE_STATUSLINE_THEME=dracula SL_DIR=. sh -c '. ./theme.sh
 
 ## Adding a New Segment
 
-1. Create `segments/my-segment.sh` with a `segment_my_segment()` function
+1. Create `lib/segments/my-segment.sh` with a `segment_my_segment()` function
 2. Set all `_seg_*` metadata variables, return 0 to render or 1 to skip
 3. Add `segment_my_segment` to `SL_SEGMENTS` in `main.sh` at the desired position
-4. Run `sh -n segments/my-segment.sh` to verify syntax
-5. Run `sh test.sh full` to verify rendering
+4. Run `sh -n lib/segments/my-segment.sh` to verify syntax
+5. Run `sh test/run.sh --scenario full` to verify rendering
 
 ## Adding a New Theme
 
-1. Create `themes/my-theme.sh` with all 12 `PALETTE_*` variables
+1. Create `lib/themes/my-theme.sh` with all 12 `PALETTE_*` variables
 2. Optionally override specific `C_*` tokens for fine-tuning contrast
-3. Run `sh -n themes/my-theme.sh` to verify syntax
-4. Test: `sh test.sh full my-theme`
+3. Run `sh -n lib/themes/my-theme.sh` to verify syntax
+4. Test: `sh test/run.sh --scenario full --theme my-theme`
 5. Validate tokens: run the token validation command above with your theme name
 
 ## Design Decisions
