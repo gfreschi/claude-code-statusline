@@ -21,8 +21,7 @@ detect_capabilities
 detect_platform
 
 # --- Tier detection ---
-_sl_cols="${COLUMNS:-$(tput cols 2>/dev/null)}"
-_sl_cols="${_sl_cols:-120}"
+_sl_cols="${COLUMNS:-120}"
 
 if [ "$_sl_cols" -ge 120 ]; then
   _sl_tier="full"
