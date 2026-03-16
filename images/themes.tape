@@ -29,4 +29,4 @@ Enter
 Sleep 500ms
 Type "sh images/render-themes.sh"
 Enter
-Sleep 14s
+Sleep 26s
