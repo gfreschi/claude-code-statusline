@@ -7,13 +7,14 @@ set -f  # disable globbing
 
 SL_DIR="${0%/*}"
 [ "$SL_DIR" = "$0" ] && SL_DIR="."
+SL_LIB="$SL_DIR/lib"
 
 # Read JSON input
 sl_input=$(cat)
 
 # Source foundation
-. "$SL_DIR/theme.sh"
-. "$SL_DIR/lib.sh"
+. "$SL_LIB/theme.sh"
+. "$SL_LIB/render.sh"
 
 # Initialize capabilities and platform
 detect_capabilities
@@ -68,13 +69,13 @@ sl_project=""
 [ -n "$sl_cwd" ] && sl_project="${sl_cwd##*/}"
 
 # Refresh git cache
-. "$SL_DIR/cache.sh"
+. "$SL_LIB/cache.sh"
 cache_refresh
 
 # --- Source all segment files (defines functions, does not execute) ---
 # Temporarily re-enable globbing for the segment glob
 set +f
-for _sf in "$SL_DIR"/segments/*.sh; do
+for _sf in "$SL_LIB"/segments/*.sh; do
   . "$_sf"
 done
 set -f
