@@ -1,0 +1,81 @@
+name: Bug Report
+description: Something isn't working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please fill in the details below so we can reproduce and fix it.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+      placeholder: The status line shows raw ANSI codes instead of colors when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to trigger the issue.
+      placeholder: |
+        1. Set theme to dracula
+        2. Open Claude Code in a terminal < 80 cols
+        3. Observe...
+    validations:
+      required: true
+
+  - type: input
+    id: shell
+    attributes:
+      label: Shell
+      description: Output of `echo $SHELL` and shell version
+      placeholder: /bin/zsh (zsh 5.9)
+    validations:
+      required: true
+
+  - type: input
+    id: terminal
+    attributes:
+      label: Terminal emulator
+      description: Which terminal are you using?
+      placeholder: iTerm2 3.5, Ghostty 1.2, Alacritty 0.15, etc.
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: macOS 15.3, Ubuntu 24.04, etc.
+    validations:
+      required: true
+
+  - type: input
+    id: theme
+    attributes:
+      label: Theme
+      description: Value of `$CLAUDE_STATUSLINE_THEME` (or "default" if unset)
+      placeholder: catppuccin-mocha
+    validations:
+      required: false
+
+  - type: textarea
+    id: test-output
+    attributes:
+      label: Test output
+      description: Output of `sh test/run.sh --check 2>&1 | tail -5` (helps rule out installation issues)
+      render: text
+    validations:
+      required: false

@@ -1,0 +1,33 @@
+name: Theme Request
+description: Request a port of an existing terminal theme
+labels: ["theme"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Want a theme ported? Let us know which one. You can also [create it yourself](https://github.com/gfreschi/claude-code-statusline/blob/main/CONTRIBUTING.md#adding-a-theme).
+
+  - type: input
+    id: theme-name
+    attributes:
+      label: Theme name
+      placeholder: Tokyo Night, Gruvbox Dark, Solarized Dark, One Dark, etc.
+    validations:
+      required: true
+
+  - type: input
+    id: theme-url
+    attributes:
+      label: Link to the theme
+      description: GitHub repo, website, or color reference
+      placeholder: https://github.com/...
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything specific about which variant or any color preferences
+    validations:
+      required: false
