@@ -99,7 +99,9 @@ export CLAUDE_STATUSLINE_THEME="dracula"
 
 Available: `catppuccin-mocha` (default), `bluloco-dark`, `dracula`, `nord`
 
-Create your own with 12 color variables, or [port your existing terminal theme](CONTRIBUTING.md#porting-an-existing-terminal-theme). Full guide: [Adding a Theme](CONTRIBUTING.md#adding-a-theme).
+Browse all themes with detailed previews and palettes: **[THEMES.md](THEMES.md)**
+
+Create your own with 12 color variables, or [port your existing terminal theme](CONTRIBUTING.md#porting-an-existing-terminal-theme).
 
 ## Configuration
 
