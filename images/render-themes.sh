@@ -11,6 +11,5 @@ for theme in catppuccin-mocha dracula nord bluloco-dark; do
     *) label="$theme" ;;
   esac
   printf '\033[1;97m %s\033[0m\n' "$label"
-  echo "$json" | COLUMNS=140 CLAUDE_STATUSLINE_THEME="$theme" sh "$DIR/main.sh"
-  printf '\n'
+  echo "$json" | COLUMNS=100 CLAUDE_STATUSLINE_THEME="$theme" sh "$DIR/main.sh"
 done

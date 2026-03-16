@@ -1,4 +1,4 @@
-Output images/.tmp-tiers-frames.png
+Output images/.tmp-tiers.gif
 
 Set FontFamily "JetBrainsMono Nerd Font"
 Set FontSize 18

@@ -1,9 +1,9 @@
-Output images/.tmp-themes-frames.png
+Output images/.tmp-themes.gif
 
 Set FontFamily "JetBrainsMono Nerd Font"
 Set FontSize 18
 Set Width 1200
-Set Height 520
+Set Height 420
 Set Padding 20
 Set MarginFill "#1e1e2e"
 Set WindowBar "Colorful"
