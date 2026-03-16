@@ -50,6 +50,29 @@ Claude Code ships with a minimal status line. If you want to see your context us
 
 ## Quick Start
 
+**One-liner install:**
+
+```sh
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/gfreschi/claude-code-statusline/main/install.sh)"
+```
+
+This clones the repo to `~/.claude/statusline` and configures Claude Code automatically. Restart Claude Code to activate.
+
+**Update:**
+
+```sh
+sh ~/.claude/statusline/install.sh update
+```
+
+**Uninstall:**
+
+```sh
+sh ~/.claude/statusline/install.sh uninstall
+```
+
+<details>
+<summary>Manual installation</summary>
+
 **1. Clone:**
 
 ```sh
@@ -64,7 +87,11 @@ git clone https://github.com/gfreschi/claude-code-statusline.git ~/.claude/statu
 }
 ```
 
-**3. Restart Claude Code.** The status line appears below the input.
+**3. Restart Claude Code.**
+
+</details>
+
+> **Upgrading from pre-1.0:** If you added custom themes to `themes/`, move them to `lib/themes/` after updating.
 
 ### Requirements
 
@@ -123,11 +150,11 @@ Falls back to `catppuccin-mocha` if the theme file is not found.
 
 ### Creating a Theme
 
-Create a file in `themes/` with 12 palette variables:
+Create a file in `lib/themes/` with 12 palette variables:
 
 ```sh
 #!/bin/sh
-# themes/my-theme.sh
+# lib/themes/my-theme.sh
 
 PALETTE_BG=236          # terminal background
 PALETTE_FG=249          # default text
@@ -154,7 +181,7 @@ C_CTX_FILLING_BG=52     # dark red instead of derived value
 Test your theme:
 
 ```sh
-sh test.sh full my-theme
+sh test/run.sh --scenario full --theme my-theme
 ```
 
 ---
@@ -173,28 +200,33 @@ sh test.sh full my-theme
 
 ```
 claude-code-statusline/
-  main.sh             # Entry point: JSON stdin -> ANSI rows
-  theme.sh            # Theme orchestrator (loads theme + derive)
-  derive.sh           # Maps 12 PALETTE_* -> ~30 C_* semantic tokens
-  lib.sh              # Rendering engine (emit_segment, render_row, etc.)
-  cache.sh            # Git state cache with 5s TTL
-  themes/
-    catppuccin-mocha.sh   # Default theme
-    bluloco-dark.sh       # Bundled
-    dracula.sh            # Bundled
-    nord.sh               # Bundled
-  segments/
-    model.sh              # Model name (Opus/Sonnet/Haiku), tier-colored
-    agent.sh              # Agent name (conditional)
-    context.sh            # Context gauge with dots, tokens, compaction ETA
-    burn-rate.sh          # Token consumption rate
-    cache-stats.sh        # Cache hit ratio
-    project.sh            # Project directory name
-    git.sh                # Branch, dirty, ahead/behind, stash
-    lines.sh              # Lines added/removed delta
-    worktree.sh           # Git worktree indicator
-    duration.sh           # Session duration with color escalation
-    micro-location.sh     # Merged project+branch for micro tier
+  main.sh               # Entry point: JSON stdin -> ANSI rows
+  install.sh            # Install / update / uninstall
+  lib/
+    render.sh           # Rendering engine (emit_segment, render_row, etc.)
+    theme.sh            # Theme orchestrator (loads theme + derive)
+    derive.sh           # Maps 12 PALETTE_* -> ~30 C_* semantic tokens
+    cache.sh            # Git state cache with 5s TTL
+    segments/
+      model.sh          # Model name (Opus/Sonnet/Haiku), tier-colored
+      agent.sh          # Agent name (conditional)
+      context.sh        # Context gauge with dots, tokens, compaction ETA
+      burn-rate.sh      # Token consumption rate
+      cache-stats.sh    # Cache hit ratio
+      project.sh        # Project directory name
+      git.sh            # Branch, dirty, ahead/behind, stash
+      lines.sh          # Lines added/removed delta
+      worktree.sh       # Git worktree indicator
+      duration.sh       # Session duration with color escalation
+      micro-location.sh # Merged project+branch for micro tier
+    themes/
+      catppuccin-mocha.sh
+      bluloco-dark.sh
+      dracula.sh
+      nord.sh
+  test/
+    run.sh              # Test harness (visual + check modes)
+    fixtures/           # JSON scenario payloads
 ```
 
 ### Segment Weight System
@@ -210,7 +242,7 @@ Segments are classified by visual weight, which determines their background and 
 
 ### How Segments Work
 
-Each segment is a pure data function that sets metadata variables. The orchestrator (`render_row` in `lib.sh`) handles all rendering:
+Each segment is a pure data function that sets metadata variables. The orchestrator (`render_row` in `lib/render.sh`) handles all rendering:
 
 ```sh
 segment_example() {
@@ -235,20 +267,23 @@ See [`CLAUDE.md`](CLAUDE.md) for the full segment contract, variable naming conv
 ## Testing
 
 ```sh
-# Run a scenario (minimal, mid, full, critical) across all 3 tiers
-sh test.sh full
+# Visual: run a scenario across all 3 tiers
+sh test/run.sh --scenario full
 
-# With a specific theme
-sh test.sh full dracula
+# Visual: specific theme
+sh test/run.sh --scenario full --theme dracula
 
-# All scenarios
-for s in minimal mid full critical; do sh test.sh "$s"; done
+# Visual: all scenarios
+sh test/run.sh
 
-# All themes
-for t in catppuccin-mocha bluloco-dark dracula nord; do sh test.sh mid "$t"; done
+# CI: assert all 48 combinations (4 scenarios x 3 tiers x 4 themes)
+sh test/run.sh --check
+
+# CI: test under a specific shell
+sh test/run.sh --check --shell dash
 
 # Syntax check all files
-find . -name '*.sh' -print0 | xargs -0 -I{} sh -c 'sh -n "$1" || echo "FAIL: $1"' _ {}
+find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 -I{} sh -c 'sh -n "$1" || echo "FAIL: $1"' _ {}
 ```
 
 ---
