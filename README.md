@@ -87,6 +87,10 @@ The layout automatically adjusts based on terminal width:
 
 ## Themes
 
+<p align="center">
+  <img src="images/themes.png" alt="Bundled themes" width="800">
+</p>
+
 Four bundled themes. Set via environment variable:
 
 ```sh
