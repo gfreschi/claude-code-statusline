@@ -20,10 +20,7 @@ cache_refresh() {
 
   # Cache directory: prefer $TMPDIR (per-user on macOS), fall back to /tmp with user ID
   _cr_cache_dir="${TMPDIR:-/tmp}/claude-code-statusline-$(id -u)"
-  if [ ! -d "$_cr_cache_dir" ]; then
-    mkdir -p "$_cr_cache_dir" 2>/dev/null
-    chmod 700 "$_cr_cache_dir" 2>/dev/null
-  fi
+  mkdir -p "$_cr_cache_dir" 2>/dev/null && chmod 700 "$_cr_cache_dir" 2>/dev/null
   _cr_hash=$(printf '%s' "$sl_cwd" | $SL_MD5_CMD 2>/dev/null)
   _cr_hash="${_cr_hash%% *}"
   _cr_cache="${_cr_cache_dir}/${_cr_hash}"
