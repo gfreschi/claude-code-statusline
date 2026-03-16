@@ -19,7 +19,7 @@ fi
 
 # ANSI control constants (theme-independent)
 # Prefixed with SL_ to avoid collision with C_DIM (256-color value)
-RST='\033[0m'
+SL_RST='\033[0m'
 SL_DIM='\033[2m'
 SL_UNDIM='\033[22m'
 SL_BOLD='\033[1m'

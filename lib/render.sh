@@ -115,7 +115,7 @@ emit_segment() {
     sl_row="${sl_row}${_es_fg_esc}${_es_content}"
   else
     # Different BG: powerline arrow transition
-    sl_row="${sl_row}${RST}\033[38;5;${sl_prev_bg}m${_es_bg_esc}${GL_POWERLINE}${_es_fg_esc}${_es_content}"
+    sl_row="${sl_row}${SL_RST}\033[38;5;${sl_prev_bg}m${_es_bg_esc}${GL_POWERLINE}${_es_fg_esc}${_es_content}"
   fi
 
   sl_prev_bg="$_es_bg"
@@ -133,7 +133,7 @@ emit_thin_sep() {
 # Closes the row with a trailing powerline arrow
 emit_end() {
   if [ -n "$sl_prev_bg" ]; then
-    sl_row="${sl_row}${RST}\033[38;5;${sl_prev_bg}m${GL_POWERLINE}${RST}"
+    sl_row="${sl_row}${SL_RST}\033[38;5;${sl_prev_bg}m${GL_POWERLINE}${SL_RST}"
   fi
 }
 
@@ -262,7 +262,7 @@ render_row() {
 
     # Build attr end sequence if attrs were set
     if [ -n "$_rr_attr_start" ]; then
-      _rr_attr_end="${RST}\033[48;5;${_rr_ebg}m\033[38;5;${_rr_efg}m"
+      _rr_attr_end="${SL_RST}\033[48;5;${_rr_ebg}m\033[38;5;${_rr_efg}m"
     fi
 
     # Build detail suffix (dim inline text for secondary info like ahead/behind)
