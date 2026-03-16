@@ -29,4 +29,4 @@ Enter
 Sleep 500ms
 Type "sh images/render-demo.sh"
 Enter
-Sleep 35s
+Sleep 27s

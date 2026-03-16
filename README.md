@@ -4,8 +4,8 @@
 
 **A Powerline-style status line for [Claude Code](https://docs.anthropic.com/en/docs/claude-code)**
 
-See your model, context window, git state, and session metrics at a glance --
-with adaptive layout, swappable themes, and zero compiled dependencies.
+See your model, context window, git state, and session metrics at a glance.
+Adaptive layout, swappable themes, zero compiled dependencies.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![POSIX sh](https://img.shields.io/badge/shell-POSIX%20sh-green.svg)]()
@@ -27,10 +27,10 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/gfreschi/claude-code-statu
 
 Restart Claude Code. Done.
 
-> Requires [`jq`](https://jqlang.github.io/jq/) and a 256-color terminal. A [Nerd Font](https://www.nerdfonts.com/) is recommended for icons (falls back to ASCII).
+> Requires [`jq`](https://jqlang.github.io/jq/) and a 256-color terminal. [Nerd Font](https://www.nerdfonts.com/) recommended for icons (falls back to ASCII).
 
 <details>
-<summary>Update / Uninstall / Manual setup</summary>
+<summary>Update, uninstall, or manual setup</summary>
 
 ```sh
 sh ~/.claude/statusline/install.sh update      # pull latest
@@ -55,25 +55,25 @@ Add to `~/.claude/settings.json`:
 
 ## What You Get
 
-The status line packs 11 segments into a Powerline-style bar:
+11 segments packed into a Powerline-style bar:
 
 | Segment | What it shows |
 |---------|---------------|
-| **Model** | Current model (Opus / Sonnet / Haiku) with distinct color per model |
-| **Agent** | Active subagent name when one is dispatched |
-| **Context** | Dot gauge, percentage, token counts, and time until auto-compaction |
+| **Model** | Current model (Opus, Sonnet, Haiku) with distinct color per model |
+| **Agent** | Active subagent name when dispatched |
+| **Context** | Dot gauge, percentage, token counts, time until auto-compaction |
 | **Burn rate** | Tokens per minute consumption |
-| **Cache** | Cache hit ratio for the current session |
+| **Cache** | Cache hit ratio for the session |
 | **Project** | Working directory name with clickable OSC 8 link |
 | **Git** | Branch, dirty flag, ahead/behind counts, stash count |
 | **Lines** | Net lines added/removed this session |
-| **Worktree** | Active git worktree indicator |
+| **Worktree** | Git worktree indicator |
 | **Duration** | Session time with color escalation |
 | **Micro location** | Compact project + branch pill for narrow terminals |
 
 ### Adapts to Your Terminal
 
-The layout automatically adjusts based on terminal width:
+The layout adjusts automatically based on terminal width:
 
 <p align="center">
   <img src="images/tiers.png" alt="Layout tiers" width="800">
@@ -81,9 +81,9 @@ The layout automatically adjusts based on terminal width:
 
 | Tier | Width | Layout |
 |------|-------|--------|
-| **Full** | >= 120 cols | Two rows -- all 11 segments |
-| **Compact** | 80-119 cols | One row -- model, context, project, duration |
-| **Micro** | < 80 cols | Minimal pill -- abbreviated model, percentage, location |
+| **Full** | >= 120 cols | Two rows, all 11 segments |
+| **Compact** | 80-119 cols | One row: model, context, project, duration |
+| **Micro** | < 80 cols | Minimal pill: abbreviated model, percentage, location |
 
 ## Themes
 
@@ -99,19 +99,19 @@ export CLAUDE_STATUSLINE_THEME="dracula"
 
 Available: `catppuccin-mocha` (default), `bluloco-dark`, `dracula`, `nord`
 
-**Create your own** with just 12 color variables -- see [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-theme).
+Create your own with 12 color variables: see [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-theme).
 
 ## Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CLAUDE_STATUSLINE_THEME` | `catppuccin-mocha` | Theme name |
-| `CLAUDE_STATUSLINE_NERD_FONT` | `1` | Set to `0` to use ASCII fallbacks |
+| `CLAUDE_STATUSLINE_NERD_FONT` | `1` | Set to `0` for ASCII fallbacks |
 | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` | `95` | Compaction countdown target % |
 
 ## How It Works
 
-`main.sh` receives JSON from Claude Code via stdin, extracts fields with a single `jq` call, and outputs ANSI-colored Powerline rows. Git state is cached with a 5s TTL to avoid lag on large repos. The entire thing is POSIX `sh` -- works on `sh`, `dash`, `bash`, and `zsh`.
+`main.sh` receives JSON from Claude Code via stdin, extracts fields with a single `jq` call, and outputs ANSI-colored Powerline rows. Git state is cached with a 5s TTL to avoid lag on large repos. The entire thing is POSIX `sh`: works with `sh`, `dash`, `bash`, and `zsh`.
 
 See [CLAUDE.md](CLAUDE.md) for the full architecture reference.
 
