@@ -8,6 +8,7 @@ Contributions are welcome! Please open an issue to discuss larger changes before
 - [Development Workflow](#development-workflow)
 - [Commit Conventions](#commit-conventions)
 - [Pull Request Guidelines](#pull-request-guidelines)
+- [Continuous Integration](#continuous-integration)
 - [Adding a Segment](#adding-a-segment)
 - [Adding a Theme](#adding-a-theme)
 - [Code Style](#code-style)
@@ -28,7 +29,7 @@ Contributions are welcome! Please open an issue to discuss larger changes before
 ```sh
 git clone https://github.com/gfreschi/claude-code-statusline.git
 cd claude-code-statusline
-sh test.sh full    # verify everything works
+sh test/run.sh --scenario full    # verify everything works
 ```
 
 ---
@@ -47,11 +48,11 @@ find . -name '*.sh' -print0 | xargs -0 -I{} sh -c 'sh -n "$1" || echo "FAIL: $1"
 grep -rn '\[\[' --include='*.sh' .
 grep -rn '^[[:space:]]*local ' --include='*.sh' .
 
-# Run all test scenarios
-for s in minimal mid full critical; do sh test.sh "$s"; done
+# Run all test scenarios (visual)
+sh test/run.sh
 
-# Run all themes
-for t in catppuccin-mocha bluloco-dark dracula nord; do sh test.sh mid "$t"; done
+# CI assertions (all scenarios x tiers x themes)
+sh test/run.sh --check
 ```
 
 4. **Commit** using [conventional commits](#commit-conventions)
@@ -96,6 +97,7 @@ Before submitting:
 - [ ] No bashisms (`[[ ]]`, `local`, `declare`, arrays, process substitution)
 - [ ] All 4 test scenarios render correctly across all 3 tiers
 - [ ] All 4 bundled themes render correctly
+- [ ] `sh test/run.sh --check` passes (all 48 combinations)
 - [ ] Commit messages follow conventional commits format
 
 **Scope:** Keep PRs focused. One segment, one theme, or one fix per PR. If a change touches multiple concerns, split it.
@@ -104,13 +106,28 @@ Before submitting:
 
 ---
 
+## Continuous Integration
+
+PRs are checked automatically by GitHub Actions:
+
+1. **Lint:** syntax check (`sh -n`) + bashism scan on all `.sh` files
+2. **Test:** `sh test/run.sh --check` under dash, bash, and zsh
+
+CI must pass before merging. You can run the same checks locally:
+
+```sh
+sh test/run.sh --check
+```
+
+---
+
 ## Adding a Segment
 
-1. Create `segments/my-segment.sh` with a `segment_my_segment()` function
+1. Create `lib/segments/my-segment.sh` with a `segment_my_segment()` function
 2. Set all `_seg_*` metadata variables, return 0 to render or 1 to skip
 3. Add `segment_my_segment` to `SL_SEGMENTS` in `main.sh` at the desired position
-4. Run syntax check: `sh -n segments/my-segment.sh`
-5. Run test harness: `sh test.sh full`
+4. Run syntax check: `sh -n lib/segments/my-segment.sh`
+5. Run test harness: `sh test/run.sh --scenario full`
 
 See [`CLAUDE.md`](CLAUDE.md) for the full segment contract, metadata variable reference, and variable naming conventions.
 
@@ -118,14 +135,14 @@ See [`CLAUDE.md`](CLAUDE.md) for the full segment contract, metadata variable re
 
 ## Adding a Theme
 
-1. Create `themes/my-theme.sh` with all 12 `PALETTE_*` variables
+1. Create `lib/themes/my-theme.sh` with all 12 `PALETTE_*` variables
 2. Optionally override specific `C_*` tokens for fine-tuning contrast
-3. Run syntax check: `sh -n themes/my-theme.sh`
-4. Test visually: `sh test.sh full my-theme`
+3. Run syntax check: `sh -n lib/themes/my-theme.sh`
+4. Test visually: `sh test/run.sh --scenario full --theme my-theme`
 5. Validate all tokens are defined:
 
 ```sh
-CLAUDE_STATUSLINE_THEME=my-theme SL_DIR=. sh -c '. ./theme.sh
+CLAUDE_STATUSLINE_THEME=my-theme SL_DIR=. SL_LIB=./lib sh -c '. ./lib/theme.sh
   for var in C_OPUS_BG C_OPUS_FG C_SONNET_BG C_SONNET_FG C_HAIKU_BG C_HAIKU_FG \
     C_BASE_BG C_BASE_FG C_MUTED_BG C_DIM_BG C_DIM C_WHITE \
     C_CTX_HEALTHY_BG C_CTX_HEALTHY_FG C_CTX_WARMING_BG C_CTX_WARMING_FG \
