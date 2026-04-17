@@ -21,6 +21,7 @@ cache_refresh() {
   sl_remote_url="" ; sl_github_base_url=""
   sl_git_staged=0 ; sl_git_unstaged=0 ; sl_git_untracked=0
   sl_git_op="" ; sl_git_step=""
+  sl_git_fork=0
 
   [ -z "$sl_cwd" ] && return
   git -C "$sl_cwd" rev-parse --git-dir >/dev/null 2>&1 || return
@@ -96,6 +97,13 @@ cache_refresh() {
     fi
   fi
 
+  # Fork detection: origin vs upstream remote URLs differ -> fork
+  _cr_origin=$(git -C "$sl_cwd" config --get remote.origin.url 2>/dev/null)
+  _cr_upstream=$(git -C "$sl_cwd" config --get remote.upstream.url 2>/dev/null)
+  if [ -n "$_cr_origin" ] && [ -n "$_cr_upstream" ] && [ "$_cr_origin" != "$_cr_upstream" ]; then
+    sl_git_fork=1
+  fi
+
   # Remote URL -> GitHub base URL
   sl_remote_url=$(git -C "$sl_cwd" remote get-url origin 2>/dev/null)
   sl_github_base_url=""
@@ -139,6 +147,7 @@ cache_refresh() {
     printf "sl_github_base_url='%s'\n" "$_cr_sq_url"
     printf "sl_git_op='%s'\n" "$_cr_sq_op"
     printf "sl_git_step='%s'\n" "$_cr_sq_step"
+    printf 'sl_git_fork=%d\n' "$sl_git_fork"
   } > "$_cr_tmp"
   mv "$_cr_tmp" "$_cr_cache"
 }

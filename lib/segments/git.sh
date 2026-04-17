@@ -61,6 +61,9 @@ segment_git() {
       [ "$sl_ahead" -gt 0 ] 2>/dev/null && _gs_detail="${_gs_detail}^${sl_ahead} "
       [ "$sl_behind" -gt 0 ] 2>/dev/null && _gs_detail="${_gs_detail}v${sl_behind} "
       [ "$sl_stash_count" -gt 0 ] 2>/dev/null && _gs_detail="${_gs_detail}*${sl_stash_count} "
+      if [ "$sl_git_fork" = "1" ]; then
+        _gs_detail="${_gs_detail}${GL_FORK} fork "
+      fi
       _seg_detail="${_gs_detail% }"
       ;;
   esac
