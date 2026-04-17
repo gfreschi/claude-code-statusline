@@ -7,13 +7,13 @@ segment_rate_limit_7d_stable() {
   [ "$_sl_layout" != "zen" ] && return 1
 
   [ -z "$sl_rate_7d_pct" ] && return 1
-  _r7_pct=$(( sl_rate_7d_pct + 0 )) 2>/dev/null || _r7_pct=-1
+  to_int _r7_pct "$sl_rate_7d_pct" -1
   [ "$_r7_pct" -lt 0 ] && return 1
   [ "$_r7_pct" -ge 70 ] && return 1
 
   # Days remaining
   _r7_now=$(date +%s)
-  _r7_reset=$(( sl_rate_7d_reset_ts + 0 )) 2>/dev/null || _r7_reset=0
+  to_int _r7_reset "$sl_rate_7d_reset_ts" 0
   _r7_secs=$(( _r7_reset - _r7_now ))
   [ "$_r7_secs" -lt 0 ] && _r7_secs=0
   _r7_days=$(( _r7_secs / 86400 ))

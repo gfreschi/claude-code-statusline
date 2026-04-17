@@ -6,9 +6,9 @@ segment_alerts_slot() {
   _as_hit=0
 
   # 1. Cache-poor
-  _as_read=$(( sl_cache_read_tokens + 0 )) 2>/dev/null || _as_read=0
+  to_int _as_read "$sl_cache_read_tokens" 0
   if [ "$_as_read" -gt 0 ]; then
-    _as_create=$(( sl_cache_create_tokens + 0 )) 2>/dev/null || _as_create=0
+    to_int _as_create "$sl_cache_create_tokens" 0
     _as_total=$(( _as_read + _as_create ))
     if [ "$_as_total" -gt 0 ]; then
       _as_ratio=$(( _as_read * 100 / _as_total ))
@@ -23,7 +23,7 @@ segment_alerts_slot() {
 
   # 2. Added dirs
   if [ "$_as_hit" -eq 0 ]; then
-    _as_dirs=$(( sl_added_dirs_count + 0 )) 2>/dev/null || _as_dirs=0
+    to_int _as_dirs "$sl_added_dirs_count" 0
     if [ "$_as_dirs" -gt 0 ]; then
       _seg_icon=""
       _seg_content="+${_as_dirs} dirs"
@@ -34,7 +34,7 @@ segment_alerts_slot() {
 
   # 3. 7d warning (zen-only)
   if [ "$_as_hit" -eq 0 ] && [ "$_sl_layout" = "zen" ]; then
-    _as_7d=$(( sl_rate_7d_pct + 0 )) 2>/dev/null || _as_7d=-1
+    to_int _as_7d "$sl_rate_7d_pct" -1
     if [ "$_as_7d" -ge 70 ]; then
       _seg_icon="$GL_WARN"
       _seg_content="7d ${_as_7d}%"

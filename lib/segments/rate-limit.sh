@@ -5,7 +5,7 @@
 
 segment_rate_limit() {
   [ -z "$sl_rate_5h_pct" ] && return 1
-  _rl_5h=$(( sl_rate_5h_pct + 0 )) 2>/dev/null || _rl_5h=-1
+  to_int _rl_5h "$sl_rate_5h_pct" -1
   [ "$_rl_5h" -lt 0 ] && return 1
 
   _rl_glyph=""
@@ -16,7 +16,7 @@ segment_rate_limit() {
 
   # Time-remaining computation
   _rl_now=$(date +%s)
-  _rl_reset=$(( sl_rate_5h_reset_ts + 0 )) 2>/dev/null || _rl_reset=0
+  to_int _rl_reset "$sl_rate_5h_reset_ts" 0
   _rl_secs=$(( _rl_reset - _rl_now ))
   [ "$_rl_secs" -lt 0 ] && _rl_secs=0
   _rl_min=$(( _rl_secs / 60 ))
@@ -79,7 +79,7 @@ segment_rate_limit() {
         _seg_content="${_rl_glyph}${_rl_burn_label} ${_rl_5h}% left . ${_rl_time} reset"
       elif [ "$_rl_state" = "warm" ]; then
         _rl_7d_inline=""
-        _rl_7d=$(( sl_rate_7d_pct + 0 )) 2>/dev/null || _rl_7d=-1
+        to_int _rl_7d "$sl_rate_7d_pct" -1
         if [ "$_sl_layout" != "zen" ] && [ "$_rl_7d" -ge 50 ]; then
           _rl_7d_inline=" . 7d ${_rl_7d}%"
         fi
@@ -92,7 +92,7 @@ segment_rate_limit() {
       _seg_content="${_rl_time} . ${_rl_5h}%"
       ;;
     pill)
-      _rl_7d=$(( sl_rate_7d_pct + 0 )) 2>/dev/null || _rl_7d=-1
+      to_int _rl_7d "$sl_rate_7d_pct" -1
       if [ "$_rl_7d" -ge 0 ]; then
         _seg_content="5h ${_rl_5h}% . ${_rl_time} | 7d ${_rl_7d}%"
       else

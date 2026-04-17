@@ -1,6 +1,21 @@
 #!/bin/sh
 # lib.sh -- Rendering helpers, capability detection, platform utilities
 
+# --- to_int(varname, value, default) ---
+# Parses $value as an integer into $varname, or uses $default on failure.
+# Handles empty strings, floats (truncates at '.'), and non-numeric input
+# safely under dash -- which aborts the shell on `$(( "52.5" + 0 ))` even
+# when the expression is guarded by `2>/dev/null || ...`.
+to_int() {
+  _ti_val="$2"
+  # Floor floats by stripping the fractional tail.
+  case "$_ti_val" in *.*) _ti_val="${_ti_val%%.*}" ;; esac
+  case "$_ti_val" in
+    ''|*[!0-9-]*|-*[!0-9]*) eval "$1=\$3" ;;
+    *) eval "$1=\$_ti_val" ;;
+  esac
+}
+
 # --- Capability detection ---
 # Sets: SL_CAP_NERD, SL_CAP_UNICODE, SL_CAP_OSC8
 # Also sets glyph variables based on capabilities
@@ -254,7 +269,7 @@ emit_recessed() {
 # Supported styles: dots (default), blocks, pips, braille.
 ctx_gauge_render() {
   _cg_out_var="$1"
-  _cg_pct=$(( ${2:-0} + 0 )) 2>/dev/null || _cg_pct=0
+  to_int _cg_pct "${2:-0}" 0
   [ "$_cg_pct" -lt 0 ] && _cg_pct=0
   [ "$_cg_pct" -gt 100 ] && _cg_pct=100
   _cg_filled=$(( _cg_pct / 20 ))

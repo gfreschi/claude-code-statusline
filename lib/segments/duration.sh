@@ -3,7 +3,7 @@
 # Reads: sl_duration_ms, sl_api_duration_ms, _sl_tier
 
 segment_duration() {
-  _du_ms=$(( sl_duration_ms + 0 )) 2>/dev/null || _du_ms=0
+  to_int _du_ms "$sl_duration_ms" 0
   _du_sec=$(( _du_ms / 1000 ))
 
   [ "$_du_sec" -lt 60 ] && return 1

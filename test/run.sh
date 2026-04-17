@@ -35,7 +35,7 @@ fi
 
 # Bundled themes and scenarios for iteration
 ALL_THEMES="catppuccin-mocha bluloco-dark dracula nord"
-ALL_SCENARIOS="minimal mid full critical rate-healthy rate-warming rate-critical"
+ALL_SCENARIOS="minimal mid full critical rate-healthy rate-warming rate-critical rate-float"
 # Zen-mode scenarios run under their own layout/COLUMNS combo (see run_check).
 ZEN_SCENARIOS="zen-full"
 ZEN_COLS=150

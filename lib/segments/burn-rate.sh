@@ -3,8 +3,8 @@
 # Reads: sl_total_input_tokens, sl_duration_ms, _sl_tier
 
 segment_burn_rate() {
-  _br_dur=$(( sl_duration_ms + 0 )) 2>/dev/null || _br_dur=0
-  _br_total=$(( sl_total_input_tokens + 0 )) 2>/dev/null || _br_total=0
+  to_int _br_dur "$sl_duration_ms" 0
+  to_int _br_total "$sl_total_input_tokens" 0
 
   # Only show after 60s of data
   [ "$_br_dur" -lt 60000 ] && return 1

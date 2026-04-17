@@ -13,7 +13,7 @@ segment_context() {
   _seg_icon="$GL_CTX"
   _seg_attrs=""
 
-  _cx_pct=$(( sl_used_pct + 0 )) 2>/dev/null || _cx_pct=0
+  to_int _cx_pct "$sl_used_pct" 0
 
   # Color threshold
   if [ "$_cx_pct" -ge 95 ]; then
@@ -41,7 +41,7 @@ segment_context() {
   _cx_dots=""
   _cx_tokens=""
   _cx_prefix=""
-  _cx_size_val=$(( sl_ctx_size + 0 )) 2>/dev/null || _cx_size_val=0
+  to_int _cx_size_val "$sl_ctx_size" 0
 
   if [ "$_sl_tier" != "micro" ]; then
     ctx_gauge_render _cx_dots "$_cx_pct"
@@ -69,7 +69,7 @@ segment_context() {
       # Compaction countdown (full tier only)
       _cx_compact=""
       _cx_compact_pct="${CLAUDE_AUTOCOMPACT_PCT_OVERRIDE:-95}"
-      _cx_dur_val=$(( sl_duration_ms + 0 )) 2>/dev/null || _cx_dur_val=0
+      to_int _cx_dur_val "$sl_duration_ms" 0
 
       if [ "$_cx_dur_val" -ge 60000 ] && [ "$_cx_pct" -ge 50 ] && [ "$_cx_pct" -lt 95 ] && [ "$_cx_size_val" -gt 0 ]; then
         _cx_current=$(( _cx_size_val * _cx_pct / 100 ))
