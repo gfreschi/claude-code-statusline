@@ -243,6 +243,7 @@ render_row() {
   for _seg_fn in $SL_SEGMENTS; do
     # Reset segment metadata
     _seg_weight="" ; _seg_min_tier="" ; _seg_group=""
+    _seg_group_fallback=""
     _seg_content="" ; _seg_icon="" ; _seg_bg="" ; _seg_fg=""
     _seg_attrs="" ; _seg_detail="" ; _seg_link_url=""
 
@@ -256,9 +257,17 @@ render_row() {
       micro)   ;;
     esac
 
-    # Group gate (full tier only)
-    if [ "$_sl_tier" = "full" ] && [ -n "$_rr_group" ] && [ "$_seg_group" != "$_rr_group" ]; then
-      continue
+    # Group + fallback resolution
+    _rr_eff_group="$_seg_group"
+    if [ "$_sl_layout" != "zen" ] && [ -n "$_seg_group_fallback" ]; then
+      _rr_eff_group="$_seg_group_fallback"
+    fi
+
+    # Group gate (multi-row tiers only)
+    if [ "$_sl_tier" = "full" ] || [ "$_sl_tier" = "zen" ]; then
+      if [ -n "$_rr_group" ] && [ "$_rr_eff_group" != "$_rr_group" ]; then
+        continue
+      fi
     fi
 
     # Icon handling (no icons in micro tier)
