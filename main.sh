@@ -145,6 +145,10 @@ if [ -n "${CLAUDE_STATUSLINE_SEGMENTS:-}" ]; then
 fi
 
 # --- Render ---
+# Skip empty rows. With CLAUDE_STATUSLINE_SEGMENTS the user may filter every
+# segment in a group (e.g. all workspace segments); render_row leaves sl_row
+# as "" in that case, and printing a blank newline would produce a visible
+# gap in the terminal.
 if [ "$_sl_tier" = "zen" ]; then
   reset_row
   render_row "session"
@@ -158,9 +162,9 @@ if [ "$_sl_tier" = "zen" ]; then
   render_row "ambient"
   row3="$sl_row"
 
-  printf '%b\n' "$row1"
-  printf '%b\n' "$row2"
-  printf '%b\n' "$row3"
+  [ -n "$row1" ] && printf '%b\n' "$row1"
+  [ -n "$row2" ] && printf '%b\n' "$row2"
+  [ -n "$row3" ] && printf '%b\n' "$row3"
 elif [ "$_sl_tier" = "full" ]; then
   reset_row
   render_row "session"
@@ -170,10 +174,10 @@ elif [ "$_sl_tier" = "full" ]; then
   render_row "workspace"
   row2="$sl_row"
 
-  printf '%b\n' "$row1"
-  printf '%b\n' "$row2"
+  [ -n "$row1" ] && printf '%b\n' "$row1"
+  [ -n "$row2" ] && printf '%b\n' "$row2"
 else
   reset_row
   render_row ""
-  printf '%b\n' "$sl_row"
+  [ -n "$sl_row" ] && printf '%b\n' "$sl_row"
 fi
