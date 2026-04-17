@@ -326,9 +326,11 @@ render_row() {
     _seg_detail=$(printf '%s' "$_seg_detail" | tr -d '\000-\037\177')
     _seg_link_url=$(printf '%s' "$_seg_link_url" | tr -d '\000-\037\177')
 
-    # Tier gate
+    # Tier gate. Hierarchy: zen > full > compact > micro. A segment declares
+    # the minimum tier it renders in; higher tiers inherit.
     case "$_seg_min_tier" in
-      full)    [ "$_sl_tier" != "full" ] && continue ;;
+      zen)     [ "$_sl_tier" != "zen" ] && continue ;;
+      full)    [ "$_sl_tier" != "zen" ] && [ "$_sl_tier" != "full" ] && continue ;;
       compact) [ "$_sl_tier" = "micro" ] && continue ;;
       micro)   ;;
     esac
