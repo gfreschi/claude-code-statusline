@@ -9,6 +9,10 @@ SL_DIR="${0%/*}"
 [ "$SL_DIR" = "$0" ] && SL_DIR="."
 SL_LIB="$SL_DIR/lib"
 
+# --- Config file sourcing (before reading other env vars) ---
+_sl_cfg="${CLAUDE_STATUSLINE_CONFIG_FILE:-$HOME/.config/claude-statusline/config.sh}"
+[ -r "$_sl_cfg" ] && . "$_sl_cfg"
+
 # Read JSON input
 sl_input=$(cat)
 
@@ -22,8 +26,12 @@ detect_platform
 
 # --- Tier detection ---
 _sl_cols="${COLUMNS:-120}"
+_sl_layout="${CLAUDE_STATUSLINE_LAYOUT:-classic}"
+case "$_sl_layout" in classic|zen) ;; *) _sl_layout=classic ;; esac
 
-if [ "$_sl_cols" -ge 120 ]; then
+if [ "$_sl_layout" = "zen" ] && [ "$_sl_cols" -ge 140 ]; then
+  _sl_tier="zen"
+elif [ "$_sl_cols" -ge 120 ]; then
   _sl_tier="full"
 elif [ "$_sl_cols" -ge 80 ]; then
   _sl_tier="compact"
