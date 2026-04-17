@@ -54,9 +54,11 @@ segment_alerts_slot() {
   _seg_min_tier="full"
   _seg_group="session"
 
-  # Minimalist override: drop word labels, keep value + state color
+  # Minimalist override: collapse word labels to 1-char unit prefixes so the
+  # value keeps its type (d=dirs, c=cache, w=weekly) instead of becoming a
+  # bare integer. Use BRE [0-9][0-9]* to match multi-digit counts.
   if [ "${CLAUDE_STATUSLINE_MINIMAL:-0}" = "1" ]; then
-    _seg_content=$(printf '%s' "$_seg_content" | sed 's/^cache //;s/^+//;s/ dirs//;s/^7d //')
+    _seg_content=$(printf '%s' "$_seg_content" | sed 's/^cache /c/;s/^+\([0-9][0-9]*\) dirs/d\1/;s/^7d /w/')
   fi
 
   return 0
