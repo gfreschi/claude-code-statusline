@@ -36,7 +36,9 @@ fi
 # Bundled themes and scenarios for iteration
 ALL_THEMES="catppuccin-mocha bluloco-dark dracula nord"
 ALL_SCENARIOS="minimal mid full critical rate-healthy rate-warming rate-critical"
-# TODO(Phase G): zen-full fixture needs a separate zen-mode invocation; defer for now.
+# Zen-mode scenarios run under their own layout/COLUMNS combo (see run_check).
+ZEN_SCENARIOS="zen-full"
+ZEN_COLS=150
 TIERS="full compact micro"
 TIER_COLS_full=140
 TIER_COLS_compact=100
@@ -143,6 +145,53 @@ run_check() {
         echo "PASS [$_rc_label]"
         _rc_pass=$(( _rc_pass + 1 ))
       done
+    done
+  done
+
+  # Zen layout matrix: only runs when the user hasn't narrowed via --scenario,
+  # or when --scenario explicitly names a zen fixture.
+  for _rc_theme in $_rc_themes; do
+    for _rc_scn in $ZEN_SCENARIOS; do
+      # If the user passed --scenario, honor it: skip zen fixtures not matching.
+      if [ -n "$_tr_scenario" ] && [ "$_tr_scenario" != "$_rc_scn" ]; then
+        continue
+      fi
+      _rc_fixture="$DIR/fixtures/${_rc_scn}.json"
+      if [ ! -f "$_rc_fixture" ]; then
+        echo "FAIL: unknown zen scenario $_rc_scn" >&2
+        _rc_fail=$(( _rc_fail + 1 ))
+        _rc_total=$(( _rc_total + 1 ))
+        continue
+      fi
+      _rc_json=$(cat "$_rc_fixture")
+      _rc_total=$(( _rc_total + 1 ))
+      _rc_label="${_rc_theme}/${_rc_scn}/zen"
+
+      _rc_output=$(echo "$_rc_json" | COLUMNS="$ZEN_COLS" CLAUDE_STATUSLINE_LAYOUT=zen CLAUDE_STATUSLINE_THEME="$_rc_theme" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>&1)
+      _rc_exit=$?
+
+      if [ "$_rc_exit" -ne 0 ]; then
+        echo "FAIL [$_rc_label]: exit code $_rc_exit"
+        _rc_fail=$(( _rc_fail + 1 ))
+        continue
+      fi
+
+      if [ -z "$_rc_output" ]; then
+        echo "FAIL [$_rc_label]: empty output"
+        _rc_fail=$(( _rc_fail + 1 ))
+        continue
+      fi
+
+      case "$_rc_output" in
+        *_seg_weight=*|*_seg_content=*|*_seg_bg=*|*_seg_fg=*|*_seg_icon=*)
+          echo "FAIL [$_rc_label]: _seg_ variable leak in output"
+          _rc_fail=$(( _rc_fail + 1 ))
+          continue
+          ;;
+      esac
+
+      echo "PASS [$_rc_label]"
+      _rc_pass=$(( _rc_pass + 1 ))
     done
   done
 
