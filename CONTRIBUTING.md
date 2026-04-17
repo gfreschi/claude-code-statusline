@@ -128,9 +128,64 @@ sh test/run.sh --check
 
 1. Create `lib/segments/my-segment.sh` with a `segment_my_segment()` function
 2. Set all `_seg_*` metadata variables, return 0 to render or 1 to skip
-3. Add `segment_my_segment` to `SL_SEGMENTS` in `main.sh` at the desired position
-4. Run syntax check: `sh -n lib/segments/my-segment.sh`
-5. Run test harness: `sh test/run.sh --scenario full`
+3. Pick a row group via `_seg_group`:
+   - `session` -- Row 1 (model-adjacent signals)
+   - `workspace` -- Row 2 (repo / cwd context)
+   - `ambient` -- Row 3, zen only (recessed supplemental info)
+4. If the segment belongs on the `ambient` row but should still show in classic mode, set `_seg_group_fallback=session` or `_seg_group_fallback=workspace`. Leave it empty to hide the segment outside zen.
+5. Set `_seg_min_tier` to the narrowest tier that should render it (`micro`, `compact`, `full`). Use `zen` only as a readability hint and self-gate inside the function: `[ "$_sl_layout" != "zen" ] && return 1`.
+6. Add `segment_my_segment` to `SL_SEGMENTS` in `main.sh` at the desired left-to-right position
+7. Run syntax check: `sh -n lib/segments/my-segment.sh`
+8. Run test harness: `sh test/run.sh --scenario full`
+
+Skeleton:
+
+```sh
+#!/bin/sh
+# segments/my-segment.sh -- short description
+
+segment_my_segment() {
+  # Guard: skip when required inputs are missing
+  [ -z "$sl_some_field" ] && return 1
+
+  _seg_weight="tertiary"
+  _seg_min_tier="full"
+  _seg_group="workspace"
+  _seg_group_fallback=""   # only needed if _seg_group="ambient"
+  _seg_icon="$GL_SOME_ICON"
+  _seg_content="label ${sl_some_field}"
+  _seg_attrs=""
+  _seg_detail=""
+  _seg_link_url=""
+
+  return 0
+}
+```
+
+### Row groups in zen mode
+
+Zen layout (opt-in via `CLAUDE_STATUSLINE_LAYOUT=zen`, requires >= 140 cols) renders three rows instead of two. The extra row is the `ambient` group: recessed-weight, muted, supplemental info.
+
+The group system works like this:
+
+- `_seg_group` declares where a segment wants to live in zen.
+- `_seg_group_fallback` declares where it should live in classic (`$_sl_layout=classic`). An empty fallback means the segment is simply skipped outside zen.
+- `_seg_group=ambient` is reserved for the zen ambient row. The orchestrator force-demotes any non-recessed weight on an ambient segment to `recessed` -- the ambient row is recessed-only by contract.
+
+Example: `segment_info_slot` declares `_seg_group=ambient` with `_seg_group_fallback=workspace`, so it lives on Row 3 in zen and on Row 2 in classic. `segment_rate_limit_7d_stable` declares `_seg_group=ambient` with no fallback, so it appears only in zen.
+
+### Priority-rotation pattern
+
+`segment_alerts_slot` and `segment_info_slot` both follow a priority-rotation pattern: they check a list of conditions in order and emit **the first match only**, falling through to `return 1` (or, for `info_slot`, a clock fallback) when nothing fires.
+
+The rotation keeps width budget low -- at most one extra pill per row, regardless of how many conditions apply. When a new slot signal is added, insert it at the correct position in the chain and keep the `_is_hit=0` / `_is_hit=1` guard pattern so later checks skip once a higher-priority one has already claimed the slot.
+
+Current priorities (canonical):
+
+- **`alerts_slot`** (Row 1, session): cache hit ratio < 70% -> added-dirs count > 0 -> (zen only) 7d rate >= 70%.
+- **`info_slot`** (Row 3 ambient with workspace fallback): non-default output style -> cwd drift below `project_dir` -> `session_name` set -> clock fallback.
+
+When authoring a new slot, document the full priority order in the file header and match the existing `_is_hit` pattern so the behaviour stays easy to audit.
 
 See [`CLAUDE.md`](CLAUDE.md) for the full segment contract, metadata variable reference, and variable naming conventions.
 
