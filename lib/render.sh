@@ -290,6 +290,7 @@ ctx_gauge_render() {
 # emits based on weight classification.
 render_row() {
   _rr_group="$1"
+  _rr_minimal="${CLAUDE_STATUSLINE_MINIMAL:-0}"
 
   for _seg_fn in $SL_SEGMENTS; do
     # Reset segment metadata
@@ -326,9 +327,9 @@ render_row() {
       fi
     fi
 
-    # Icon handling (no icons in micro tier)
+    # Icon handling (no icons in micro tier, skipped entirely in minimal mode)
     _rr_icon=""
-    if [ "$SL_CAP_NERD" -eq 1 ] && [ -n "$_seg_icon" ] && [ "$_sl_tier" != "micro" ]; then
+    if [ "$_rr_minimal" != "1" ] && [ "$SL_CAP_NERD" -eq 1 ] && [ -n "$_seg_icon" ] && [ "$_sl_tier" != "micro" ]; then
       _rr_icon="${_seg_icon} "
     fi
 

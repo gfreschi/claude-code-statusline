@@ -119,5 +119,10 @@ segment_rate_limit() {
     _seg_content="${_rl_glyph:-} ${_rl_time}"
   fi
 
+  # Minimalist override: strip word labels, keep value + time
+  if [ "${CLAUDE_STATUSLINE_MINIMAL:-0}" = "1" ]; then
+    _seg_content="${_rl_time} ${_rl_5h}%"
+  fi
+
   return 0
 }

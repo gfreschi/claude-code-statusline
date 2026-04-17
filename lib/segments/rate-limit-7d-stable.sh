@@ -26,5 +26,10 @@ segment_rate_limit_7d_stable() {
   _seg_attrs=""
   _seg_content="7d ${_r7_pct}% . ${_r7_days}d"
 
+  # Minimalist override: drop word label
+  if [ "${CLAUDE_STATUSLINE_MINIMAL:-0}" = "1" ]; then
+    _seg_content="${_r7_pct}% ${_r7_days}d"
+  fi
+
   return 0
 }

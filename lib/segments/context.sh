@@ -93,5 +93,10 @@ segment_context() {
       ;;
   esac
 
+  # Minimalist override: drop "compact" label suffix (keeps dots + pct + tokens)
+  if [ "${CLAUDE_STATUSLINE_MINIMAL:-0}" = "1" ]; then
+    _seg_content=$(printf '%s' "$_seg_content" | sed 's/ compact [^ ]*//')
+  fi
+
   return 0
 }

@@ -53,5 +53,11 @@ segment_alerts_slot() {
   _seg_weight="tertiary"
   _seg_min_tier="full"
   _seg_group="session"
+
+  # Minimalist override: drop word labels, keep value + state color
+  if [ "${CLAUDE_STATUSLINE_MINIMAL:-0}" = "1" ]; then
+    _seg_content=$(printf '%s' "$_seg_content" | sed 's/^cache //;s/^+//;s/ dirs//;s/^7d //')
+  fi
+
   return 0
 }

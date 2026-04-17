@@ -64,5 +64,10 @@ segment_duration() {
     fi
   fi
 
+  # Minimalist override: drop API-time suffix
+  if [ "${CLAUDE_STATUSLINE_MINIMAL:-0}" = "1" ]; then
+    _seg_detail=""
+  fi
+
   return 0
 }
