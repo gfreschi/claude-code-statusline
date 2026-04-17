@@ -20,6 +20,7 @@ cache_refresh() {
   sl_ahead=0 ; sl_behind=0 ; sl_stash_count=0
   sl_remote_url="" ; sl_github_base_url=""
   sl_git_staged=0 ; sl_git_unstaged=0 ; sl_git_untracked=0
+  sl_git_op="" ; sl_git_step=""
 
   [ -z "$sl_cwd" ] && return
   git -C "$sl_cwd" rev-parse --git-dir >/dev/null 2>&1 || return
@@ -69,6 +70,32 @@ cache_refresh() {
   sl_stash_count=$(git -C "$sl_cwd" stash list 2>/dev/null | wc -l)
   sl_stash_count=$(( sl_stash_count + 0 ))
 
+  # Mid-merge / mid-rebase detection (resolve real git-dir to support worktrees and subdirs)
+  _cr_gitdir=$(git -C "$sl_cwd" rev-parse --git-dir 2>/dev/null)
+  if [ -n "$_cr_gitdir" ]; then
+    case "$_cr_gitdir" in
+      /*) ;;
+      *)  _cr_gitdir="$sl_cwd/$_cr_gitdir" ;;
+    esac
+    if [ -d "$_cr_gitdir/rebase-merge" ]; then
+      sl_git_op="REBASING"
+      if [ -r "$_cr_gitdir/rebase-merge/msgnum" ] && [ -r "$_cr_gitdir/rebase-merge/end" ]; then
+        _cr_step=$(cat "$_cr_gitdir/rebase-merge/msgnum" 2>/dev/null | tr -d ' \t\r\n')
+        _cr_total=$(cat "$_cr_gitdir/rebase-merge/end" 2>/dev/null | tr -d ' \t\r\n')
+        [ -n "$_cr_step" ] && [ -n "$_cr_total" ] && sl_git_step="${_cr_step}/${_cr_total}"
+      fi
+    elif [ -d "$_cr_gitdir/rebase-apply" ]; then
+      sl_git_op="REBASING"
+      if [ -r "$_cr_gitdir/rebase-apply/next" ] && [ -r "$_cr_gitdir/rebase-apply/last" ]; then
+        _cr_step=$(cat "$_cr_gitdir/rebase-apply/next" 2>/dev/null | tr -d ' \t\r\n')
+        _cr_total=$(cat "$_cr_gitdir/rebase-apply/last" 2>/dev/null | tr -d ' \t\r\n')
+        [ -n "$_cr_step" ] && [ -n "$_cr_total" ] && sl_git_step="${_cr_step}/${_cr_total}"
+      fi
+    elif [ -f "$_cr_gitdir/MERGE_HEAD" ]; then
+      sl_git_op="MERGING"
+    fi
+  fi
+
   # Remote URL -> GitHub base URL
   sl_remote_url=$(git -C "$sl_cwd" remote get-url origin 2>/dev/null)
   sl_github_base_url=""
@@ -97,6 +124,8 @@ cache_refresh() {
   _cr_tmp="${_cr_cache}.$$"
   _cr_sq_branch=$(printf '%s' "$sl_branch" | sed "s/'/'\\\\''/g")
   _cr_sq_url=$(printf '%s' "$sl_github_base_url" | sed "s/'/'\\\\''/g")
+  _cr_sq_op=$(printf '%s' "$sl_git_op" | sed "s/'/'\\\\''/g")
+  _cr_sq_step=$(printf '%s' "$sl_git_step" | sed "s/'/'\\\\''/g")
   {
     printf "sl_branch='%s'\n" "$_cr_sq_branch"
     printf 'sl_is_detached=%d\n' "$sl_is_detached"
@@ -108,6 +137,8 @@ cache_refresh() {
     printf 'sl_git_unstaged=%d\n' "$sl_git_unstaged"
     printf 'sl_git_untracked=%d\n' "$sl_git_untracked"
     printf "sl_github_base_url='%s'\n" "$_cr_sq_url"
+    printf "sl_git_op='%s'\n" "$_cr_sq_op"
+    printf "sl_git_step='%s'\n" "$_cr_sq_step"
   } > "$_cr_tmp"
   mv "$_cr_tmp" "$_cr_cache"
 }

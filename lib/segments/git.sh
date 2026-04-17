@@ -7,6 +7,21 @@
 segment_git() {
   [ -z "$sl_branch" ] && return 1
 
+  # Mid-merge / mid-rebase override: replace branch display with loud status.
+  # Uses tertiary weight so _seg_fg override lands (secondary ignores fg).
+  if [ -n "$sl_git_op" ]; then
+    _seg_icon="$GL_WARN"
+    _seg_content="! ${sl_git_op}"
+    [ -n "$sl_git_step" ] && _seg_content="${_seg_content} ${sl_git_step}"
+    _seg_attrs="bold"
+    _seg_fg=$C_CTX_CRIT_FG
+    _seg_detail=""
+    _seg_weight="tertiary"
+    _seg_min_tier="compact"
+    _seg_group="workspace"
+    return 0
+  fi
+
   _seg_weight="secondary"
   _seg_min_tier="compact"
   _seg_group="workspace"
