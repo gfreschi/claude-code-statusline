@@ -317,6 +317,15 @@ render_row() {
     # Call segment function -- skip if returns non-zero
     "$_seg_fn" || continue
 
+    # Strip C0 control bytes + DEL from untrusted segment content. Fields
+    # originate in JSON (model.display_name, session_name, output_style) or
+    # the filesystem (git branch, rebase/merge state files) and could carry
+    # ANSI escapes, cursor ops, or NULs. Must run before OSC 8 wrapping and
+    # detail-ANSI decoration below (those legitimately inject \033).
+    _seg_content=$(printf '%s' "$_seg_content" | tr -d '\000-\037\177')
+    _seg_detail=$(printf '%s' "$_seg_detail" | tr -d '\000-\037\177')
+    _seg_link_url=$(printf '%s' "$_seg_link_url" | tr -d '\000-\037\177')
+
     # Tier gate
     case "$_seg_min_tier" in
       full)    [ "$_sl_tier" != "full" ] && continue ;;
