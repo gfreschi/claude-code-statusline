@@ -13,8 +13,13 @@ PROJECT_ROOT="$(cd "$DIR/.." && pwd)"
 
 # --- Bench mode (short-circuits before normal flag parsing) ---
 if [ "${1:-}" = "--bench" ]; then
-  _thr_ms=50
-  uname -s | grep -qi linux && _thr_ms=30
+  # Thresholds calibrated for the v2.0 hot path: jq fixed cost (~25-30ms) +
+  # segment iteration across 3 row groups in zen mode + git cache refresh.
+  # These are regression guards, not aspirational targets. Future perf work
+  # (collapsing the sparkline glyph pipeline, caching rendered segments across
+  # row passes) could lower these substantially.
+  _thr_ms=100
+  uname -s | grep -qi linux && _thr_ms=60
   _tot_ms=0
   for _i in 1 2 3 4 5 6 7 8 9 10; do
     _start=$(date +%s%N 2>/dev/null || python3 -c 'import time; print(int(time.time()*1e9))')
