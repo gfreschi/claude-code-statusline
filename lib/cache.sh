@@ -127,9 +127,16 @@ cache_refresh() {
   fi
 
   # Write cache atomically
-  # String values: single-quote with proper escaping to prevent injection
+  # String values: strip C0 + DEL first (git refs should never contain them,
+  # but the cache is sourced -- treat git output as untrusted), then
+  # single-quote-escape to prevent shell injection. Runs once per 5s TTL
+  # so the cost is negligible.
   # Numeric values: %d already sanitizes to digits only
   _cr_tmp="${_cr_cache}.$$"
+  sl_branch=$(printf '%s' "$sl_branch" | tr -d '\000-\037\177')
+  sl_github_base_url=$(printf '%s' "$sl_github_base_url" | tr -d '\000-\037\177')
+  sl_git_op=$(printf '%s' "$sl_git_op" | tr -d '\000-\037\177')
+  sl_git_step=$(printf '%s' "$sl_git_step" | tr -d '\000-\037\177')
   _cr_sq_branch=$(printf '%s' "$sl_branch" | sed "s/'/'\\\\''/g")
   _cr_sq_url=$(printf '%s' "$sl_github_base_url" | sed "s/'/'\\\\''/g")
   _cr_sq_op=$(printf '%s' "$sl_git_op" | sed "s/'/'\\\\''/g")
