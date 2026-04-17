@@ -7,6 +7,9 @@
 
 SL_CACHE_TTL=5
 
+# Shared cache directory: prefer $TMPDIR (per-user on macOS), fall back to /tmp with user ID
+SL_CACHE_DIR="${TMPDIR:-/tmp}/claude-code-statusline-$(id -u)"
+
 # --- cache_refresh() ---
 # Checks cache freshness, runs git commands if stale
 cache_refresh() {
@@ -18,12 +21,10 @@ cache_refresh() {
   [ -z "$sl_cwd" ] && return
   git -C "$sl_cwd" rev-parse --git-dir >/dev/null 2>&1 || return
 
-  # Cache directory: prefer $TMPDIR (per-user on macOS), fall back to /tmp with user ID
-  _cr_cache_dir="${TMPDIR:-/tmp}/claude-code-statusline-$(id -u)"
-  mkdir -p "$_cr_cache_dir" 2>/dev/null && chmod 700 "$_cr_cache_dir" 2>/dev/null
+  mkdir -p "$SL_CACHE_DIR" 2>/dev/null && chmod 700 "$SL_CACHE_DIR" 2>/dev/null
   _cr_hash=$(printf '%s' "$sl_cwd" | $SL_MD5_CMD 2>/dev/null)
   _cr_hash="${_cr_hash%% *}"
-  _cr_cache="${_cr_cache_dir}/${_cr_hash}"
+  _cr_cache="${SL_CACHE_DIR}/${_cr_hash}"
 
   # Check freshness
   if [ -f "$_cr_cache" ]; then
@@ -101,4 +102,38 @@ cache_refresh() {
     printf "sl_github_base_url='%s'\n" "$_cr_sq_url"
   } > "$_cr_tmp"
   mv "$_cr_tmp" "$_cr_cache"
+}
+
+# --- Sparkline ring buffer (8 samples) ---
+# File: $SL_CACHE_DIR/burn-history
+# Format: single line, 8 comma-separated non-negative integers, oldest first.
+# Reader/writer sanitize values via printf '%d' to prevent injection.
+
+sparkline_push() {
+  # args: value (integer, tokens/minute)
+  # Appends to ring buffer, keeps newest 8.
+  _sp_val=$(printf '%d' "${1:-0}" 2>/dev/null || echo 0)
+  _sp_file="$SL_CACHE_DIR/burn-history"
+  mkdir -p "$SL_CACHE_DIR" 2>/dev/null
+  chmod 0700 "$SL_CACHE_DIR" 2>/dev/null
+  _sp_cur=""
+  [ -r "$_sp_file" ] && _sp_cur=$(cat "$_sp_file" 2>/dev/null)
+  if [ -z "$_sp_cur" ]; then
+    _sp_new="$_sp_val"
+  else
+    _sp_new="${_sp_cur},${_sp_val}"
+  fi
+  _sp_count=$(printf '%s\n' "$_sp_new" | tr ',' '\n' | wc -l | tr -d ' ')
+  while [ "$_sp_count" -gt 8 ]; do
+    _sp_new="${_sp_new#*,}"
+    _sp_count=$(( _sp_count - 1 ))
+  done
+  printf '%s\n' "$_sp_new" > "$_sp_file"
+  chmod 0600 "$_sp_file" 2>/dev/null
+}
+
+sparkline_read() {
+  # Prints the current ring as comma-separated, or empty string if missing.
+  _sp_file="$SL_CACHE_DIR/burn-history"
+  [ -r "$_sp_file" ] && cat "$_sp_file" 2>/dev/null
 }
