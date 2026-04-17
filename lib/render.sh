@@ -36,6 +36,14 @@ detect_capabilities() {
     GL_CLOCK='\xef\x80\x97'            # U+F017 nf-fa-clock_o
     GL_WARN='\xef\x81\xb1'             # U+F071 nf-fa-warning
     GL_THIN_SEP='\xe2\x94\x82'         # U+2502
+    GL_BATT_FULL='\xef\x89\x80'        # U+F240 nf-fa-battery_full
+    GL_BATT_MID='\xef\x89\x82'         # U+F242 nf-fa-battery_half
+    GL_BATT_LOW='\xef\x89\x84'         # U+F244 nf-fa-battery_quarter
+    GL_FORK='\xee\x9c\xa5'             # U+E725 reuse git branch glyph as minimal fork marker
+    GL_CAP_LEFT='\xee\x82\xb6'         # U+E0B6 powerline round left
+    GL_CAP_RIGHT='\xee\x82\xb4'        # U+E0B4 powerline round right
+    GL_UP='\xe2\x86\x91'               # U+2191
+    GL_DOWN='\xe2\x86\x93'             # U+2193
   else
     GL_POWERLINE='>'
     GL_MODEL=''
@@ -51,6 +59,14 @@ detect_capabilities() {
     GL_CLOCK=''
     GL_WARN='!!'
     GL_THIN_SEP='|'
+    GL_BATT_FULL='FULL'
+    GL_BATT_MID='MID'
+    GL_BATT_LOW='LOW'
+    GL_FORK='fork'
+    GL_CAP_LEFT='('
+    GL_CAP_RIGHT=')'
+    GL_UP='^'
+    GL_DOWN='v'
   fi
 
   # Unicode symbols (dots, arrows) -- independent of Nerd Font
@@ -60,12 +76,38 @@ detect_capabilities() {
     GL_ARROW_UP='↗'
     GL_ARROW_DOWN='↘'
     GL_ARROW_FLAT='→'
+    GL_BLK_FILLED='\xe2\x96\x93'       # U+2593
+    GL_BLK_EMPTY='\xe2\x96\x91'        # U+2591
+    GL_PIP_FILLED='\xc2\xb7'           # U+00B7 middle dot
+    GL_PIP_EMPTY=' '
+    GL_BRL_0='\xe2\xa0\x80'            # U+2800
+    GL_BRL_1='\xe2\xa0\x81'            # U+2801
+    GL_BRL_2='\xe2\xa0\x83'            # U+2803
+    GL_BRL_3='\xe2\xa0\x87'            # U+2807
+    GL_BRL_4='\xe2\xa0\x8f'            # U+280F
+    GL_BRL_5='\xe2\xa0\x9f'            # U+281F
+    GL_BRL_6='\xe2\xa0\xbf'            # U+283F
+    GL_BRL_7='\xe2\xa1\xbf'            # U+287F
+    GL_BRL_8='\xe2\xa3\xbf'            # U+28FF
   else
     GL_DOT_FILLED='*'
     GL_DOT_EMPTY='-'
     GL_ARROW_UP='+'
     GL_ARROW_DOWN='-'
     GL_ARROW_FLAT='='
+    GL_BLK_FILLED='#'
+    GL_BLK_EMPTY='.'
+    GL_PIP_FILLED='*'
+    GL_PIP_EMPTY=' '
+    GL_BRL_0='_'
+    GL_BRL_1='_'
+    GL_BRL_2='.'
+    GL_BRL_3='.'
+    GL_BRL_4='-'
+    GL_BRL_5='-'
+    GL_BRL_6='='
+    GL_BRL_7='+'
+    GL_BRL_8='#'
   fi
 }
 
