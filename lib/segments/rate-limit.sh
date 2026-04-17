@@ -30,6 +30,13 @@ segment_rate_limit() {
     _rl_time="${_rl_m}m"
   fi
 
+  # Sanity clamp: a 5h window is 18000s; anything past 6h of remaining time
+  # means the upstream sent a garbage resets_at (demo fixtures, bad clock,
+  # future epoch). Show "??" rather than "2284320h" of nonsense.
+  if [ "$_rl_secs" -gt 21600 ]; then
+    _rl_time="??"
+  fi
+
   # State thresholds
   if [ "$_rl_5h" -ge 85 ]; then
     _rl_state="crit"

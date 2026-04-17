@@ -18,6 +18,12 @@ segment_rate_limit_7d_stable() {
   [ "$_r7_secs" -lt 0 ] && _r7_secs=0
   _r7_days=$(( _r7_secs / 86400 ))
 
+  # Sanity clamp: 7d window is 604800s; past 8d of remaining time the
+  # upstream sent a garbage resets_at. Show "?" instead of "95180d".
+  if [ "$_r7_secs" -gt 691200 ]; then
+    _r7_days="?"
+  fi
+
   _seg_weight="recessed"
   _seg_min_tier="zen"
   _seg_group="ambient"
