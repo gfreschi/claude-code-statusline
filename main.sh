@@ -98,6 +98,11 @@ sl_project=""
 . "$SL_LIB/cache.sh"
 cache_refresh
 
+# Memoize the current epoch. Several segments need it for "time until reset"
+# math; without this each one forks `date +%s` independently, which adds up
+# fast under zen's multi-pass layout.
+_sl_now=$(date +%s)
+
 # Push one burn-rate sample per render into the sparkline ring buffer.
 # This MUST happen once per render, not per row group -- segment functions
 # run 2-3x in zen layout as rows are assembled, which would triple-count.

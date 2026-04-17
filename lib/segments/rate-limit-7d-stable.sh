@@ -11,8 +11,8 @@ segment_rate_limit_7d_stable() {
   [ "$_r7_pct" -lt 0 ] && return 1
   [ "$_r7_pct" -ge 70 ] && return 1
 
-  # Days remaining
-  _r7_now=$(date +%s)
+  # Days remaining. $_sl_now is memoized once in main.sh.
+  _r7_now=$_sl_now
   to_int _r7_reset "$sl_rate_7d_reset_ts" 0
   _r7_secs=$(( _r7_reset - _r7_now ))
   [ "$_r7_secs" -lt 0 ] && _r7_secs=0

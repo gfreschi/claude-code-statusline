@@ -14,8 +14,8 @@ segment_rate_limit() {
   _seg_attrs=""
   _seg_icon=""
 
-  # Time-remaining computation
-  _rl_now=$(date +%s)
+  # Time-remaining computation. $_sl_now is memoized once in main.sh.
+  _rl_now=$_sl_now
   to_int _rl_reset "$sl_rate_5h_reset_ts" 0
   _rl_secs=$(( _rl_reset - _rl_now ))
   [ "$_rl_secs" -lt 0 ] && _rl_secs=0
