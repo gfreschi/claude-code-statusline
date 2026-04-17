@@ -20,8 +20,6 @@ segment_info_slot() {
         # Truncate to 20 chars with left-ellipsis
         _is_len=${#_is_rel}
         if [ "$_is_len" -gt 20 ]; then
-          _is_rel="...${_is_rel#???${_is_rel%??????????????????}}"
-          # Simpler: take last 17 chars
           _is_rel="...$(printf '%s' "$_is_rel" | awk '{print substr($0, length($0)-16)}')"
         fi
         _seg_content="> ${_is_rel}"

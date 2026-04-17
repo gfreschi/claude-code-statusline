@@ -12,7 +12,8 @@ PROJECT_ROOT="$(cd "$DIR/.." && pwd)"
 
 # Bundled themes and scenarios for iteration
 ALL_THEMES="catppuccin-mocha bluloco-dark dracula nord"
-ALL_SCENARIOS="minimal mid full critical"
+ALL_SCENARIOS="minimal mid full critical rate-healthy rate-warming rate-critical"
+# TODO(Phase G): zen-full fixture needs a separate zen-mode invocation; defer for now.
 TIERS="full compact micro"
 TIER_COLS_full=140
 TIER_COLS_compact=100

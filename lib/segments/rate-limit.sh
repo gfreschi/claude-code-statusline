@@ -4,9 +4,11 @@
 # Env:   CLAUDE_STATUSLINE_RATE_STYLE (ember|bar|pill|minimal)
 
 segment_rate_limit() {
+  [ -z "$sl_rate_5h_pct" ] && return 1
   _rl_5h=$(( sl_rate_5h_pct + 0 )) 2>/dev/null || _rl_5h=-1
   [ "$_rl_5h" -lt 0 ] && return 1
 
+  _rl_glyph=""
   _seg_group="session"
   _seg_min_tier="micro"
   _seg_attrs=""

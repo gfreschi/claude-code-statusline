@@ -6,6 +6,7 @@
 segment_rate_limit_7d_stable() {
   [ "$_sl_layout" != "zen" ] && return 1
 
+  [ -z "$sl_rate_7d_pct" ] && return 1
   _r7_pct=$(( sl_rate_7d_pct + 0 )) 2>/dev/null || _r7_pct=-1
   [ "$_r7_pct" -lt 0 ] && return 1
   [ "$_r7_pct" -ge 70 ] && return 1
