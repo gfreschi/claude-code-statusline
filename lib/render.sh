@@ -299,6 +299,11 @@ render_row() {
       _rr_eff_group="$_seg_group_fallback"
     fi
 
+    # Ambient group hard-enforces recessed weight (contract C3)
+    if [ "$_seg_group" = "ambient" ] && [ "$_seg_weight" != "recessed" ]; then
+      _seg_weight="recessed"
+    fi
+
     # Group gate (multi-row tiers only)
     if [ "$_sl_tier" = "full" ] || [ "$_sl_tier" = "zen" ]; then
       if [ -n "$_rr_group" ] && [ "$_rr_eff_group" != "$_rr_group" ]; then
