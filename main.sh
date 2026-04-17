@@ -109,6 +109,24 @@ SL_SEGMENTS="segment_model segment_agent segment_context \
   segment_rate_limit_7d_stable \
   segment_lines segment_worktree segment_duration"
 
+# Per-segment override (comma-separated basenames). Unknown names are silently
+# dropped so `command not found` stderr noise never leaks into the status line.
+if [ -n "${CLAUDE_STATUSLINE_SEGMENTS:-}" ]; then
+  _sl_override=""
+  _sl_old_ifs="$IFS"
+  IFS=,
+  for _sl_name in $CLAUDE_STATUSLINE_SEGMENTS; do
+    _sl_name=$(printf '%s' "$_sl_name" | tr -d ' ')
+    [ -z "$_sl_name" ] && continue
+    _sl_fn="segment_${_sl_name}"
+    if command -v "$_sl_fn" >/dev/null 2>&1; then
+      _sl_override="${_sl_override} ${_sl_fn}"
+    fi
+  done
+  IFS="$_sl_old_ifs"
+  [ -n "$_sl_override" ] && SL_SEGMENTS="$_sl_override"
+fi
+
 # --- Render ---
 if [ "$_sl_tier" = "zen" ]; then
   reset_row
