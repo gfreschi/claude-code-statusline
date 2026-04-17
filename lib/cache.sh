@@ -3,7 +3,8 @@
 # Requires: SL_MD5_CMD, SL_STAT_FMT from lib.sh detect_platform()
 # Reads: sl_cwd
 # Sets: sl_branch, sl_is_detached, sl_is_dirty, sl_ahead, sl_behind,
-#       sl_stash_count, sl_remote_url, sl_github_base_url
+#       sl_stash_count, sl_remote_url, sl_github_base_url,
+#       sl_git_staged, sl_git_unstaged, sl_git_untracked
 
 SL_CACHE_TTL=5
 
@@ -18,6 +19,7 @@ cache_refresh() {
   sl_branch="" ; sl_is_detached=0 ; sl_is_dirty=0
   sl_ahead=0 ; sl_behind=0 ; sl_stash_count=0
   sl_remote_url="" ; sl_github_base_url=""
+  sl_git_staged=0 ; sl_git_unstaged=0 ; sl_git_untracked=0
 
   [ -z "$sl_cwd" ] && return
   git -C "$sl_cwd" rev-parse --git-dir >/dev/null 2>&1 || return
@@ -45,11 +47,13 @@ cache_refresh() {
     sl_is_detached=1
   fi
 
-  # Dirty check
-  if ! git -C "$sl_cwd" diff-index --quiet HEAD -- 2>/dev/null; then
+  # Porcelain status: derives dirty flag + staged/unstaged/untracked counts in a single git call
+  _cr_porcelain=$(git -C "$sl_cwd" status --porcelain 2>/dev/null)
+  if [ -n "$_cr_porcelain" ]; then
     sl_is_dirty=1
-  elif [ -n "$(git -C "$sl_cwd" ls-files --others --exclude-standard 2>/dev/null | head -1)" ]; then
-    sl_is_dirty=1
+    sl_git_staged=$(printf '%s\n' "$_cr_porcelain" | awk '/^[MADRC]/ {n++} END {print n+0}')
+    sl_git_unstaged=$(printf '%s\n' "$_cr_porcelain" | awk '/^.[MADRC]/ {n++} END {print n+0}')
+    sl_git_untracked=$(printf '%s\n' "$_cr_porcelain" | awk '/^\?\?/ {n++} END {print n+0}')
   fi
 
   # Ahead/behind
@@ -100,6 +104,9 @@ cache_refresh() {
     printf 'sl_ahead=%d\n' "$sl_ahead"
     printf 'sl_behind=%d\n' "$sl_behind"
     printf 'sl_stash_count=%d\n' "$sl_stash_count"
+    printf 'sl_git_staged=%d\n' "$sl_git_staged"
+    printf 'sl_git_unstaged=%d\n' "$sl_git_unstaged"
+    printf 'sl_git_untracked=%d\n' "$sl_git_untracked"
     printf "sl_github_base_url='%s'\n" "$_cr_sq_url"
   } > "$_cr_tmp"
   mv "$_cr_tmp" "$_cr_cache"

@@ -1,7 +1,8 @@
 #!/bin/sh
 # segments/git.sh -- Branch + dirty + ahead/behind + stash + OSC 8 link
 # Reads: sl_branch, sl_is_detached, sl_is_dirty, sl_ahead, sl_behind,
-#         sl_stash_count, sl_github_base_url, _sl_tier
+#         sl_stash_count, sl_github_base_url, _sl_tier,
+#         sl_git_staged, sl_git_unstaged, sl_git_untracked
 
 segment_git() {
   [ -z "$sl_branch" ] && return 1
@@ -31,11 +32,21 @@ segment_git() {
 
   case "$_sl_tier" in
     full|*)
-      # Detail suffix rendered in dim by orchestrator via _seg_detail
-      _seg_detail=""
-      [ "$sl_ahead" -gt 0 ] 2>/dev/null && _seg_detail="${_seg_detail}^${sl_ahead}"
-      [ "$sl_behind" -gt 0 ] 2>/dev/null && _seg_detail="${_seg_detail}v${sl_behind}"
-      [ "$sl_stash_count" -gt 0 ] 2>/dev/null && _seg_detail="${_seg_detail} *${sl_stash_count}"
+      # Split dirty indicator: staged / unstaged / untracked (plus ahead/behind/stash)
+      _gs_detail=""
+      if [ -n "$sl_git_staged" ] && [ "$sl_git_staged" -gt 0 ] 2>/dev/null; then
+        _gs_detail="${_gs_detail}+${sl_git_staged} "
+      fi
+      if [ -n "$sl_git_unstaged" ] && [ "$sl_git_unstaged" -gt 0 ] 2>/dev/null; then
+        _gs_detail="${_gs_detail}-${sl_git_unstaged} "
+      fi
+      if [ -n "$sl_git_untracked" ] && [ "$sl_git_untracked" -gt 0 ] 2>/dev/null; then
+        _gs_detail="${_gs_detail}?${sl_git_untracked} "
+      fi
+      [ "$sl_ahead" -gt 0 ] 2>/dev/null && _gs_detail="${_gs_detail}^${sl_ahead} "
+      [ "$sl_behind" -gt 0 ] 2>/dev/null && _gs_detail="${_gs_detail}v${sl_behind} "
+      [ "$sl_stash_count" -gt 0 ] 2>/dev/null && _gs_detail="${_gs_detail}*${sl_stash_count} "
+      _seg_detail="${_gs_detail% }"
       ;;
   esac
 
