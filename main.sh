@@ -103,7 +103,7 @@ set -f
 
 # --- Segment registration order ---
 SL_SEGMENTS="segment_model segment_agent segment_context \
-  segment_rate_limit segment_burn_rate segment_cache_stats \
+  segment_rate_limit segment_burn_rate segment_cache_stats segment_alerts_slot \
   segment_micro_location \
   segment_project segment_git segment_lines \
   segment_rate_limit_7d_stable \
