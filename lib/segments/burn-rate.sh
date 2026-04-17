@@ -27,9 +27,9 @@ segment_burn_rate() {
     _br_text="${_br_tpm} tok/min"
   fi
 
-  # Braille sparkline tail: push latest tpm into ring buffer and render
-  # 4+ samples as braille chars in full/zen tiers only.
-  sparkline_push "$_br_tpm"
+  # Braille sparkline tail: the ring buffer is pushed once per render from
+  # main.sh (not here -- segments run 2-3x per render as rows are assembled,
+  # which would triple-push). Render 4+ samples as braille in full/zen tiers.
   _br_spark=""
   if [ "$_sl_tier" = "full" ] || [ "$_sl_tier" = "zen" ]; then
     _br_history=$(sparkline_read)

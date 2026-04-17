@@ -93,6 +93,18 @@ sl_project=""
 . "$SL_LIB/cache.sh"
 cache_refresh
 
+# Push one burn-rate sample per render into the sparkline ring buffer.
+# This MUST happen once per render, not per row group -- segment functions
+# run 2-3x in zen layout as rows are assembled, which would triple-count.
+if [ -n "$sl_duration_ms" ] && [ -n "$sl_total_input_tokens" ]; then
+  to_int _sl_dur_ms "$sl_duration_ms" 0
+  to_int _sl_in_tok "$sl_total_input_tokens" 0
+  if [ "$_sl_dur_ms" -gt 0 ] && [ "$_sl_in_tok" -gt 0 ]; then
+    _sl_tpm=$(( _sl_in_tok * 60000 / _sl_dur_ms ))
+    sparkline_push "$_sl_tpm"
+  fi
+fi
+
 # --- Source all segment files (defines functions, does not execute) ---
 # Temporarily re-enable globbing for the segment glob
 set +f
