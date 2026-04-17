@@ -234,6 +234,42 @@ emit_recessed() {
   fi
 }
 
+# --- ctx_gauge_render(output_var, pct) ---
+# Produces a 5-cell gauge based on CLAUDE_STATUSLINE_CTX_GAUGE env var.
+# Supported styles: dots (default), blocks, pips, braille.
+ctx_gauge_render() {
+  _cg_out_var="$1"
+  _cg_pct=$(( ${2:-0} + 0 )) 2>/dev/null || _cg_pct=0
+  [ "$_cg_pct" -lt 0 ] && _cg_pct=0
+  [ "$_cg_pct" -gt 100 ] && _cg_pct=100
+  _cg_filled=$(( _cg_pct / 20 ))
+  [ "$_cg_filled" -gt 5 ] && _cg_filled=5
+  _cg_empty=$(( 5 - _cg_filled ))
+  _cg_result=""
+  case "${CLAUDE_STATUSLINE_CTX_GAUGE:-dots}" in
+    blocks)
+      _cg_i=0; while [ "$_cg_i" -lt "$_cg_filled" ]; do _cg_result="${_cg_result}${GL_BLK_FILLED}"; _cg_i=$((_cg_i+1)); done
+      _cg_i=0; while [ "$_cg_i" -lt "$_cg_empty"  ]; do _cg_result="${_cg_result}${GL_BLK_EMPTY}";  _cg_i=$((_cg_i+1)); done
+      ;;
+    pips)
+      _cg_i=0; while [ "$_cg_i" -lt "$_cg_filled" ]; do _cg_result="${_cg_result}${GL_PIP_FILLED} "; _cg_i=$((_cg_i+1)); done
+      _cg_i=0; while [ "$_cg_i" -lt "$_cg_empty"  ]; do _cg_result="${_cg_result}${GL_PIP_EMPTY} ";  _cg_i=$((_cg_i+1)); done
+      _cg_result="${_cg_result% }"
+      ;;
+    braille)
+      # Map pct into 9 buckets (BRL_0..BRL_8) stretched across 3 cells
+      _cg_n=$(( _cg_pct * 9 / 100 ))
+      [ "$_cg_n" -gt 8 ] && _cg_n=8
+      eval "_cg_result=\$GL_BRL_${_cg_n}\$GL_BRL_${_cg_n}\$GL_BRL_${_cg_n}"
+      ;;
+    dots|*)
+      _cg_i=0; while [ "$_cg_i" -lt "$_cg_filled" ]; do _cg_result="${_cg_result}${GL_DOT_FILLED}"; _cg_i=$((_cg_i+1)); done
+      _cg_i=0; while [ "$_cg_i" -lt "$_cg_empty"  ]; do _cg_result="${_cg_result}${GL_DOT_EMPTY}";  _cg_i=$((_cg_i+1)); done
+      ;;
+  esac
+  eval "$_cg_out_var=\$_cg_result"
+}
+
 # --- render_row(group) ---
 # Iterates SL_SEGMENTS, calls each function, applies tier/group gates,
 # emits based on weight classification.

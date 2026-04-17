@@ -44,11 +44,7 @@ segment_context() {
   _cx_size_val=$(( sl_ctx_size + 0 )) 2>/dev/null || _cx_size_val=0
 
   if [ "$_sl_tier" != "micro" ]; then
-    _cx_filled=$(( _cx_pct / 20 ))
-    [ "$_cx_filled" -gt 5 ] && _cx_filled=5
-    _cx_empty=$(( 5 - _cx_filled ))
-    _cx_i=0; while [ "$_cx_i" -lt "$_cx_filled" ]; do _cx_dots="${_cx_dots}${GL_DOT_FILLED}"; _cx_i=$((_cx_i+1)); done
-    _cx_i=0; while [ "$_cx_i" -lt "$_cx_empty" ];  do _cx_dots="${_cx_dots}${GL_DOT_EMPTY}";  _cx_i=$((_cx_i+1)); done
+    ctx_gauge_render _cx_dots "$_cx_pct"
 
     if [ "$_cx_size_val" -gt 0 ]; then
       _cx_used_tok=$(( _cx_size_val * _cx_pct / 100 ))
