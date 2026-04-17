@@ -187,8 +187,10 @@ Set by `cache.sh` via `cache_refresh`. Available to segments:
 - **Prefix all local variables** with `_xx_` where `xx` is a 2-3 letter function abbreviation to avoid collisions. POSIX sh has no `local` keyword, so all variables are global -- prefixing prevents accidental overwrites.
 - **Use `${VAR:-default}` pattern** in derive.sh so themes can override any token.
 - **`set -f`** is active in main.sh (globbing disabled). Temporarily re-enable with `set +f` if needed.
-- Use `$(( ))` for arithmetic, `2>/dev/null` to suppress errors on non-numeric input.
+- **Never rely on `$(( x + 0 )) 2>/dev/null || x=default` to guard arithmetic.** Under `dash` a parse error in `$(( ))` (e.g. when `x="52.5"` — Claude Code emits floats) aborts the shell with exit 2; the `2>/dev/null || ...` fallback is a parse-time error, not a runtime one, and never runs. Use the `to_int` helper in `lib/render.sh` instead: `to_int _var "$sl_value" 0` — it floors floats and replaces non-integer strings with the default. All v2 segments follow this pattern.
 - **Cache file security:** String values written to cache files must use single-quote escaping to prevent shell injection when the cache is sourced. Numeric values use `printf '%d'` which sanitizes to digits.
+- **Control-character sanitization** happens at the `jq` extraction boundary in `main.sh` (via `gsub("[[:cntrl:]]"; "")` on string fields) and in `cache.sh` before writing git-sourced strings to the cache file. Segments can trust that `sl_*` variables are free of ESC / BEL / other C0 bytes, so rendered output cannot be spoofed by an attacker who controls a git branch name, repo path, or session name.
+- **Side-effect-having work runs once per render, not per row group.** The render orchestrator iterates segments three times in zen (one pass per row group). Segments with side effects — e.g. `sparkline_push` — must live in `main.sh` (called once after `cache_refresh`) rather than inside a segment function, otherwise they execute N× per render and corrupt any ring-buffer they maintain.
 
 ## Testing
 
@@ -275,6 +277,9 @@ CLAUDE_STATUSLINE_THEME=dracula SL_DIR=. SL_LIB=./lib sh -c '. ./lib/theme.sh
 - **No `set -e`:** Intentionally omitted. A status line should degrade gracefully to partial output on errors rather than producing no output at all. Individual failures (e.g., missing git, broken JSON) result in skipped segments, not a blank line.
 - **Single `jq` call:** All JSON fields are extracted in one `jq` invocation with `@sh` quoting and `eval`. This avoids spawning multiple `jq` processes (one per field) which would add noticeable latency to every status line render.
 - **Git cache with TTL:** Git operations are cached for 5 seconds in a per-user temp directory. Without caching, running `git status`, `git stash list`, etc. on every render would cause visible lag, especially on large repositories.
+- **Zen inherits full's segments:** The tier gate in `render_row` is hierarchical, not flat — a segment with `_seg_min_tier="full"` also renders in zen. Without this, zen would ship as strictly less content than full (it would strip burn-rate, alerts-slot, info-slot, lines, worktree). The gate reads: `zen)` needs exactly zen; `full)` needs zen or full; `compact)` needs anything but micro; `micro)` always.
+- **Adaptive slots over always-on segments:** v2 replaced always-on `cache_stats` with the `alerts_slot` + `info_slot` architecture. Slots emit only the first priority match (or nothing). This keeps the line cleaner when nothing interesting is happening and surfaces only actionable state when it is.
+- **Benchmark thresholds are regression guards, not targets.** The `--bench` threshold (100ms macOS / 60ms Linux) reflects the current hot path: jq fixed cost (~25-30ms) + three segment passes in zen + git cache refresh. If you change those thresholds, do it deliberately after a perf pass — the numbers exist to catch regressions, not to justify current overhead.
 
 ## JSON Input Schema
 
