@@ -39,6 +39,11 @@ sl_cache_create_tokens="" ; sl_cache_read_tokens=""
 sl_total_input_tokens="" ; sl_total_output_tokens=""
 sl_duration_ms="" ; sl_lines_added="" ; sl_lines_removed=""
 sl_worktree_name="" ; sl_agent_name="" ; sl_exceeds_200k=""
+sl_rate_5h_pct="" ; sl_rate_5h_reset_ts=""
+sl_rate_7d_pct="" ; sl_rate_7d_reset_ts=""
+sl_output_style="" ; sl_session_name=""
+sl_added_dirs_count="" ; sl_api_duration_ms=""
+sl_project_dir=""
 
 _jq_out=$(echo "$sl_input" | jq -r '
   "sl_cwd=" + (.cwd // .workspace.current_dir // "" | @sh),
@@ -57,7 +62,16 @@ _jq_out=$(echo "$sl_input" | jq -r '
   "sl_lines_removed=" + (.cost.total_lines_removed // "" | tostring | @sh),
   "sl_worktree_name=" + (.worktree.name // "" | @sh),
   "sl_agent_name=" + (.agent.name // "" | @sh),
-  "sl_exceeds_200k=" + (.exceeds_200k_tokens // false | tostring | @sh)
+  "sl_exceeds_200k=" + (.exceeds_200k_tokens // false | tostring | @sh),
+  "sl_rate_5h_pct=" + (.rate_limits.five_hour.used_percentage // "" | tostring | @sh),
+  "sl_rate_5h_reset_ts=" + (.rate_limits.five_hour.resets_at // "" | tostring | @sh),
+  "sl_rate_7d_pct=" + (.rate_limits.seven_day.used_percentage // "" | tostring | @sh),
+  "sl_rate_7d_reset_ts=" + (.rate_limits.seven_day.resets_at // "" | tostring | @sh),
+  "sl_output_style=" + (.output_style.name // "" | @sh),
+  "sl_session_name=" + (.session_name // "" | @sh),
+  "sl_added_dirs_count=" + (.workspace.added_dirs // [] | length | tostring | @sh),
+  "sl_api_duration_ms=" + (.cost.total_api_duration_ms // "" | tostring | @sh),
+  "sl_project_dir=" + (.workspace.project_dir // .cwd // "" | @sh)
 ' 2>/dev/null) && eval "$_jq_out"
 
 # Derived values
