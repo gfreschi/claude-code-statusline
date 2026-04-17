@@ -55,21 +55,25 @@ Add to `~/.claude/settings.json`:
 
 ## What You Get
 
-11 segments packed into a Powerline-style bar:
+A Powerline-style bar packed with live session signals:
 
 | Segment | What it shows |
 |---------|---------------|
 | **Model** | Current model (Opus, Sonnet, Haiku) with distinct color per model |
 | **Agent** | Active subagent name when dispatched |
-| **Context** | Dot gauge, percentage, token counts, time until auto-compaction |
-| **Burn rate** | Tokens per minute consumption |
-| **Cache** | Cache hit ratio for the session |
+| **Context** | Configurable gauge (dots, blocks, braille, pips), percentage, token counts, time until auto-compaction |
+| **Rate-limit** | 5h usage pill with battery glyph, pace arrow, and `burns in 12m` escalation when overrunning |
+| **Burn rate** | Tokens per minute with a small braille sparkline of the last 8 samples |
+| **Alerts slot** | Priority-rotating pill: cache-hit-ratio warning (< 70%), added-dirs, or 7d rate warning |
 | **Project** | Working directory name with clickable OSC 8 link |
-| **Git** | Branch, dirty flag, ahead/behind counts, stash count |
+| **Git** | Branch, staged / unstaged / untracked split, ahead/behind, stash, fork badge, conflict override |
+| **Info slot** | Priority-rotating: non-default output style, subdir drift, session name, or clock |
 | **Lines** | Net lines added/removed this session |
 | **Worktree** | Git worktree indicator |
-| **Duration** | Session time with color escalation |
+| **Duration** | Session time with API-time suffix and color escalation |
 | **Micro location** | Compact project + branch pill for narrow terminals |
+
+The always-on cache segment from v1 was retired. Cache hit ratio now appears only when it drops below 70%, via the adaptive alerts slot -- when caching is healthy, the line stays calm.
 
 ### Adapts to Your Terminal
 
@@ -81,9 +85,23 @@ The layout adjusts automatically based on terminal width:
 
 | Tier | Width | Layout |
 |------|-------|--------|
-| **Full** | >= 120 cols | Two rows, all 11 segments |
+| **Full** | >= 120 cols | Two rows, session + workspace |
 | **Compact** | 80-119 cols | One row: model, context, project, duration |
 | **Micro** | < 80 cols | Minimal pill: abbreviated model, percentage, location |
+
+### Zen layout
+
+For wide terminals (>= 140 cols), opt into a 3-row "heavy-top" layout:
+
+```sh
+export CLAUDE_STATUSLINE_LAYOUT=zen
+```
+
+- **Row 1 (session)** -- the dynamic glance strip: model, context, rate-limit, burn-rate, alerts.
+- **Row 2 (workspace)** -- the repo view: project, git, lines, worktree, duration.
+- **Row 3 (ambient)** -- recessed supplemental info: stable 7d rate pill, output style, subdir, session name, or a clock fallback.
+
+Below 140 cols, the status line falls back to Full/Compact/Micro automatically.
 
 ## Themes
 
@@ -107,9 +125,34 @@ Create your own with 12 color variables, or [port your existing terminal theme](
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CLAUDE_STATUSLINE_THEME` | `catppuccin-mocha` | Theme name |
+| `CLAUDE_STATUSLINE_THEME` | `catppuccin-mocha` | Theme name (any file under `lib/themes/`) |
 | `CLAUDE_STATUSLINE_NERD_FONT` | `1` | Set to `0` for ASCII fallbacks |
 | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` | `95` | Compaction countdown target % |
+| `CLAUDE_STATUSLINE_LAYOUT` | `classic` | `classic` (2 rows) or `zen` (3 rows, needs >= 140 cols) |
+| `CLAUDE_STATUSLINE_RATE_STYLE` | `ember` | Rate-limit preset: `ember`, `bar`, `pill`, or `minimal` |
+| `CLAUDE_STATUSLINE_CTX_GAUGE` | `dots` | Context gauge style: `dots`, `blocks`, `braille`, `pips` |
+| `CLAUDE_STATUSLINE_CAP_STYLE` | `powerline` | Row caps: `powerline` triangles or `capsule` rounded ends |
+| `CLAUDE_STATUSLINE_SEGMENTS` | (unset) | Comma-separated override of the default segment list |
+| `CLAUDE_STATUSLINE_MINIMAL` | `0` | `1` strips icons and word labels (color preserved) |
+| `CLAUDE_STATUSLINE_CONFIG_FILE` | `~/.config/claude-statusline/config.sh` | Alternate config-file path |
+
+Unknown values silently fall back to the default so a typo never breaks the status line.
+
+Full reference: [docs/CONFIG.md](docs/CONFIG.md).
+
+### Config file
+
+Instead of exporting many env vars, keep them in a shell file that is sourced at startup:
+
+```sh
+# ~/.config/claude-statusline/config.sh
+CLAUDE_STATUSLINE_THEME=dracula
+CLAUDE_STATUSLINE_LAYOUT=zen
+CLAUDE_STATUSLINE_RATE_STYLE=ember
+CLAUDE_STATUSLINE_CTX_GAUGE=blocks
+```
+
+Every `CLAUDE_STATUSLINE_*` variable is honored. The file is sourced as POSIX shell at the top of `main.sh`, so only use it to assign variables -- do not run side-effect commands from it.
 
 ## How It Works
 
