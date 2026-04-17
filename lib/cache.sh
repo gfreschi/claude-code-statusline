@@ -157,6 +157,9 @@ cache_refresh() {
     printf 'sl_git_fork=%d\n' "$sl_git_fork"
   } > "$_cr_tmp"
   mv "$_cr_tmp" "$_cr_cache"
+  # Lock down to owner-only: the cache is sourced back as shell code, so
+  # another user on a shared host must not be able to write to it.
+  chmod 0600 "$_cr_cache" 2>/dev/null
 }
 
 # --- Sparkline ring buffer (8 samples) ---
