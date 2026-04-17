@@ -110,7 +110,23 @@ SL_SEGMENTS="segment_model segment_agent segment_context \
   segment_lines segment_worktree segment_duration"
 
 # --- Render ---
-if [ "$_sl_tier" = "full" ]; then
+if [ "$_sl_tier" = "zen" ]; then
+  reset_row
+  render_row "session"
+  row1="$sl_row"
+
+  reset_row
+  render_row "workspace"
+  row2="$sl_row"
+
+  reset_row
+  render_row "ambient"
+  row3="$sl_row"
+
+  printf '%b\n' "$row1"
+  printf '%b\n' "$row2"
+  printf '%b\n' "$row3"
+elif [ "$_sl_tier" = "full" ]; then
   reset_row
   render_row "session"
   row1="$sl_row"
