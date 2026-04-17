@@ -19,6 +19,12 @@ detect_capabilities() {
   [ -n "${TMUX:-}" ] && SL_CAP_OSC8=0
   [ -n "${SSH_CONNECTION:-}" ] && SL_CAP_OSC8=0
 
+  # Cap shape selection (capsule vs. powerline triangle)
+  case "${CLAUDE_STATUSLINE_CAP_STYLE:-powerline}" in
+    capsule) SL_USE_CAPSULE=1 ;;
+    *)       SL_USE_CAPSULE=0 ;;
+  esac
+
   # --- Set glyphs based on capabilities ---
   if [ "$SL_CAP_NERD" -eq 1 ]; then
     # Nerd Font glyphs (UTF-8 byte sequences)
@@ -150,8 +156,13 @@ emit_segment() {
   _es_fg_esc="\033[38;5;${_es_fg}m"
 
   if [ -z "$sl_prev_bg" ]; then
-    # First segment: just set BG+FG
-    sl_row="${sl_row}${_es_bg_esc}${_es_fg_esc}${_es_content}"
+    # First segment on this row. Capsule style prepends a left-cap glyph
+    # in the upcoming segment's BG color on the terminal's default BG.
+    if [ "${SL_USE_CAPSULE:-0}" -eq 1 ]; then
+      sl_row="${sl_row}${SL_RST}\033[38;5;${_es_bg}m${GL_CAP_LEFT}${_es_bg_esc}${_es_fg_esc}${_es_content}"
+    else
+      sl_row="${sl_row}${_es_bg_esc}${_es_fg_esc}${_es_content}"
+    fi
   elif [ "$sl_prev_bg" = "$_es_bg" ]; then
     # Same BG: just change FG (no separator)
     sl_row="${sl_row}${_es_fg_esc}${_es_content}"
@@ -172,10 +183,14 @@ emit_thin_sep() {
 }
 
 # --- emit_end() ---
-# Closes the row with a trailing powerline arrow
+# Closes the row with a trailing cap (powerline arrow or capsule right-cap)
 emit_end() {
   if [ -n "$sl_prev_bg" ]; then
-    sl_row="${sl_row}${SL_RST}\033[38;5;${sl_prev_bg}m${GL_POWERLINE}${SL_RST}"
+    if [ "${SL_USE_CAPSULE:-0}" -eq 1 ]; then
+      sl_row="${sl_row}${SL_RST}\033[38;5;${sl_prev_bg}m${GL_CAP_RIGHT}${SL_RST}"
+    else
+      sl_row="${sl_row}${SL_RST}\033[38;5;${sl_prev_bg}m${GL_POWERLINE}${SL_RST}"
+    fi
   fi
 }
 
