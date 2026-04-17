@@ -6,9 +6,32 @@
 #   sh test/run.sh --scenario full --theme nord # visual: one scenario, specific theme
 #   sh test/run.sh --check                      # CI: assert all combinations, exit 0/1
 #   sh test/run.sh --check --shell dash         # CI: run main.sh under specific shell
+#   sh test/run.sh --bench                      # benchmark: 10 zen-full renders, fail on slow
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$DIR/.." && pwd)"
+
+# --- Bench mode (short-circuits before normal flag parsing) ---
+if [ "${1:-}" = "--bench" ]; then
+  _thr_ms=50
+  uname -s | grep -qi linux && _thr_ms=30
+  _tot_ms=0
+  for _i in 1 2 3 4 5 6 7 8 9 10; do
+    _start=$(date +%s%N 2>/dev/null || python3 -c 'import time; print(int(time.time()*1e9))')
+    COLUMNS=150 CLAUDE_STATUSLINE_LAYOUT=zen cat "$DIR/fixtures/zen-full.json" | sh "$PROJECT_ROOT/main.sh" > /dev/null
+    _end=$(date +%s%N 2>/dev/null || python3 -c 'import time; print(int(time.time()*1e9))')
+    _delta_ms=$(( (_end - _start) / 1000000 ))
+    _tot_ms=$(( _tot_ms + _delta_ms ))
+  done
+  _avg_ms=$(( _tot_ms / 10 ))
+  echo "Average render: ${_avg_ms}ms (threshold: ${_thr_ms}ms)"
+  if [ "$_avg_ms" -gt "$_thr_ms" ]; then
+    echo "FAIL: exceeds threshold"
+    exit 1
+  fi
+  echo "PASS"
+  exit 0
+fi
 
 # Bundled themes and scenarios for iteration
 ALL_THEMES="catppuccin-mocha bluloco-dark dracula nord"
