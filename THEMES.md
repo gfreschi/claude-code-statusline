@@ -1,6 +1,6 @@
 # Themes
 
-Four bundled themes. Each one adapts all 11 segments, 3 model tiers, 5 context gauge states, and duration escalation colors.
+Four bundled themes. Each one adapts all 14 segments, 3 model tiers, 5 context gauge states, and duration escalation colors.
 
 ```sh
 export CLAUDE_STATUSLINE_THEME="catppuccin-mocha"

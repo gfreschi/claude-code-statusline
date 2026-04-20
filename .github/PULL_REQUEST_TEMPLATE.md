@@ -18,6 +18,6 @@ sh test/run.sh --check
 
 - [ ] `sh -n` passes on all `.sh` files
 - [ ] No bashisms (`[[ ]]`, `local`, `declare`, arrays, process substitution)
-- [ ] `sh test/run.sh --check` passes (48 combinations)
+- [ ] `sh test/run.sh --check` passes (100 combinations)
 - [ ] Tested visually with at least one theme
 - [ ] Conventional commit messages

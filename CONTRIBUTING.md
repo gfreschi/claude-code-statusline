@@ -98,9 +98,9 @@ Before submitting:
 
 - [ ] All `.sh` files pass `sh -n` syntax check
 - [ ] No bashisms (`[[ ]]`, `local`, `declare`, arrays, process substitution)
-- [ ] All 4 test scenarios render correctly across all 3 tiers
+- [ ] All 8 scenarios (+ zen-full) render correctly across all tiers (micro / compact / full / zen)
 - [ ] All 4 bundled themes render correctly
-- [ ] `sh test/run.sh --check` passes (all 48 combinations)
+- [ ] `sh test/run.sh --check` passes (all 100 combinations)
 - [ ] Commit messages follow conventional commits format
 
 **Scope:** Keep PRs focused. One segment, one theme, or one fix per PR. If a change touches multiple concerns, split it.

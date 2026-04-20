@@ -1,7 +1,7 @@
 #!/bin/sh
 # main.sh -- Claude Code status line orchestrator
 # Entry point: receives JSON via stdin, outputs ANSI-colored rows
-# Row count depends on terminal width tier (full=2, compact/micro=1)
+# Row count depends on terminal width tier (zen=3, full=2, compact/micro=1)
 
 set -f  # disable globbing
 
