@@ -4,7 +4,7 @@
 
 **A Powerline-style status line for [Claude Code](https://docs.anthropic.com/en/docs/claude-code)**
 
-See your model, context window, git state, and session metrics at a glance.
+See your model, context window, rate-limit budget, git state, and session metrics at a glance.
 Adaptive layout, swappable themes, zero compiled dependencies.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
