@@ -1,10 +1,11 @@
 #!/bin/sh
 # cache.sh -- Git cache with 5s TTL
-# Requires: SL_MD5_CMD, SL_STAT_FMT from lib.sh detect_platform()
+# Requires: SL_MD5_CMD, SL_STAT_FMT from render.sh detect_platform()
 # Reads: sl_cwd
 # Sets: sl_branch, sl_is_detached, sl_is_dirty, sl_ahead, sl_behind,
 #       sl_stash_count, sl_remote_url, sl_github_base_url,
-#       sl_git_staged, sl_git_unstaged, sl_git_untracked
+#       sl_git_staged, sl_git_unstaged, sl_git_untracked,
+#       sl_git_op, sl_git_step, sl_git_fork
 
 SL_CACHE_TTL=5
 

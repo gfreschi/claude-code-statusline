@@ -1,5 +1,5 @@
 #!/bin/sh
-# lib.sh -- Rendering helpers, capability detection, platform utilities
+# render.sh -- Rendering helpers, capability detection, platform utilities
 
 # --- to_int(varname, value, default) ---
 # Parses $value as an integer into $varname, or uses $default on failure.

@@ -45,7 +45,7 @@ sh test/run.sh --scenario full    # verify everything works
 
 ```sh
 # Syntax check all files
-find . -name '*.sh' -print0 | xargs -0 -I{} sh -c 'sh -n "$1" || echo "FAIL: $1"' _ {}
+find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 -I{} sh -c 'sh -n "$1" || echo "FAIL: $1"' _ {}
 
 # Check for bashisms
 grep -rn '\[\[' --include='*.sh' .

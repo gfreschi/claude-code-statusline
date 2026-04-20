@@ -44,7 +44,7 @@ Claude Code -> stdin (JSON) -> main.sh -> stdout (ANSI rows)
 | `lib/segments/*.sh` | Each defines a `segment_*()` function returning metadata via `_seg_*` variables |
 | `install.sh` | Lifecycle manager: install, update, uninstall |
 | `test/run.sh` | Test harness: visual + check modes, --shell flag for multi-shell testing |
-| `test/fixtures/*.json` | JSON scenario payloads: minimal, mid, full, critical |
+| `test/fixtures/*.json` | JSON scenario payloads: minimal, mid, full, critical, rate-healthy, rate-warming, rate-critical, rate-float, zen-full |
 
 ### Four-Tier Adaptive Layout
 
@@ -196,7 +196,7 @@ Set by `cache.sh` via `cache_refresh`. Available to segments:
 
 ```sh
 # Run a scenario (minimal, mid, full, critical, rate-healthy, rate-warming,
-# rate-critical, zen-full) across all tiers:
+# rate-critical, rate-float, zen-full) across all tiers:
 sh test/run.sh --scenario full
 
 # Specify a theme:
