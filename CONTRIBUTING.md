@@ -61,6 +61,25 @@ sh test/run.sh --check
 4. **Commit** using [conventional commits](#commit-conventions)
 5. **Open a PR** with a clear description of what and why
 
+### Regenerating the README GIFs
+
+The `images/*.gif` files are produced by [vhs](https://github.com/charmbracelet/vhs). Each GIF has a matching `*.tape` file that drives a helper `render-*.sh` script in the same directory. Run VHS interactively (requires a real terminal -- CI / headless environments cannot render):
+
+```sh
+brew install vhs                          # macOS; see vhs README for other platforms
+
+vhs images/demo.tape                      # hero GIF (demo.gif)
+vhs images/tiers.tape                     # zen + full + compact + micro (tiers.gif)
+vhs images/themes.tape                    # theme switcher (themes.gif)
+vhs images/rate-styles.tape               # rate-limit presets (rate-styles.gif)
+vhs images/ctx-gauges.tape                # context gauge variants (ctx-gauges.gif)
+vhs images/caps.tape                      # powerline vs capsule caps (caps.gif)
+
+for t in images/theme-*.tape; do vhs "$t"; done   # individual theme previews
+```
+
+Renders are sequential (VHS owns the PTY). A full rebuild takes ~3-5 minutes. The Catppuccin Mocha palette hardcoded in every tape matches the bundled default theme -- change it in the tape header if you port to a different default.
+
 ---
 
 ## Commit Conventions
