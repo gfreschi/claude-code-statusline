@@ -170,40 +170,44 @@ cache_refresh() {
 
 sparkline_push() {
   # args: value (integer, tokens/minute)
-  # Appends to ring buffer, keeps newest 8. Sanitizes every value to non-negative int.
+  # Appends to ring buffer, keeps newest 8. All sanitization is done via
+  # POSIX parameter expansion + case patterns -- no per-token subshells,
+  # which kept the old implementation forking ~12 times per render. The
+  # ring file is a controlled format (no embedded whitespace), so we
+  # accept tokens verbatim once they pass the numeric-only case match and
+  # fall back to 0 for anything suspect.
   _sp_val=${1:-0}
   case "$_sp_val" in
-    ''|*[!0-9-]*|-*[!0-9]*) _sp_val=0 ;;
-    *) _sp_val=$(printf '%d' "$_sp_val" 2>/dev/null); [ -z "$_sp_val" ] && _sp_val=0 ;;
+    ''|*[!0-9-]*|-*[!0-9]*|-*) _sp_val=0 ;;
   esac
-  [ "$_sp_val" -lt 0 ] 2>/dev/null && _sp_val=0
   _sp_file="$SL_CACHE_DIR/burn-history"
   mkdir -p "$SL_CACHE_DIR" 2>/dev/null
   chmod 0700 "$SL_CACHE_DIR" 2>/dev/null
 
-  # Read existing buffer, sanitize every token to guard against corruption
-  _sp_sanitized=""
+  # Read existing buffer via builtin `read` (the file is single-line by
+  # construction). Avoids a $() subshell + cat fork.
+  _sp_raw=""
   if [ -r "$_sp_file" ]; then
-    _sp_raw=$(cat "$_sp_file" 2>/dev/null)
-    _sp_oifs=$IFS
-    IFS=','
-    for _sp_tok in $_sp_raw; do
-      # Strip any embedded newlines / whitespace, coerce via printf '%d'
-      _sp_tok=$(printf '%s' "$_sp_tok" | tr -d '\r\n\t ')
-      [ -z "$_sp_tok" ] && continue
-      case "$_sp_tok" in
-        ''|*[!0-9-]*|-*[!0-9]*) _sp_clean=0 ;;
-        *) _sp_clean=$(printf '%d' "$_sp_tok" 2>/dev/null); [ -z "$_sp_clean" ] && _sp_clean=0 ;;
-      esac
-      [ "$_sp_clean" -lt 0 ] 2>/dev/null && _sp_clean=0
-      if [ -z "$_sp_sanitized" ]; then
-        _sp_sanitized="$_sp_clean"
-      else
-        _sp_sanitized="${_sp_sanitized},${_sp_clean}"
-      fi
-    done
-    IFS=$_sp_oifs
+    IFS= read -r _sp_raw < "$_sp_file" 2>/dev/null || _sp_raw=""
   fi
+
+  # Sanitize each token and rebuild the comma-joined buffer. Invalid
+  # tokens coerce to 0 to preserve sample count (matches prior behaviour).
+  _sp_sanitized=""
+  _sp_oifs=$IFS
+  IFS=','
+  for _sp_tok in $_sp_raw; do
+    case "$_sp_tok" in
+      ''|*[!0-9-]*|-*[!0-9]*|-*) _sp_clean=0 ;;
+      *) _sp_clean="$_sp_tok" ;;
+    esac
+    if [ -z "$_sp_sanitized" ]; then
+      _sp_sanitized="$_sp_clean"
+    else
+      _sp_sanitized="${_sp_sanitized},${_sp_clean}"
+    fi
+  done
+  IFS=$_sp_oifs
 
   # Append new value
   if [ -z "$_sp_sanitized" ]; then
@@ -212,9 +216,13 @@ sparkline_push() {
     _sp_new="${_sp_sanitized},${_sp_val}"
   fi
 
-  # Keep last 8 (relies on printf '%s\n' producing a trailing newline so wc -l
-  # counts commas + 1; do not drop the \n)
-  _sp_count=$(printf '%s\n' "$_sp_new" | tr ',' '\n' | wc -l | tr -d ' ')
+  # Count tokens by walking comma boundaries in-shell (no printf|tr|wc pipe).
+  _sp_count=1
+  _sp_walk="$_sp_new"
+  while [ "$_sp_walk" != "${_sp_walk#*,}" ]; do
+    _sp_walk="${_sp_walk#*,}"
+    _sp_count=$((_sp_count + 1))
+  done
   while [ "$_sp_count" -gt 8 ]; do
     _sp_new="${_sp_new#*,}"
     _sp_count=$(( _sp_count - 1 ))

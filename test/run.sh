@@ -200,6 +200,38 @@ run_check() {
     done
   done
 
+  # Sparkline ring-buffer integration: push 100 samples into an isolated cache
+  # dir, then verify exactly 8 are retained in insertion order. Guards the
+  # perf-pass rewrite from regressing the ring semantics.
+  _rc_total=$(( _rc_total + 1 ))
+  _rc_label="sparkline/ring-100-pushes"
+  _rc_cachedir=$(mktemp -d "${TMPDIR:-/tmp}/cc-sl-test.XXXXXX" 2>/dev/null)
+  if [ -z "$_rc_cachedir" ]; then
+    echo "FAIL [$_rc_label]: mktemp failed"
+    _rc_fail=$(( _rc_fail + 1 ))
+  else
+    _rc_sp_actual=$(
+      SL_CACHE_DIR="$_rc_cachedir" "$_tr_shell" -c '
+        SL_DIR="'"$PROJECT_ROOT"'"
+        SL_LIB="$SL_DIR/lib"
+        . "$SL_LIB/render.sh"
+        detect_platform
+        . "$SL_LIB/cache.sh"
+        _i=1
+        while [ "$_i" -le 100 ]; do sparkline_push "$_i"; _i=$((_i+1)); done
+        sparkline_read
+      '
+    )
+    if [ "$_rc_sp_actual" = "93,94,95,96,97,98,99,100" ]; then
+      echo "PASS [$_rc_label]"
+      _rc_pass=$(( _rc_pass + 1 ))
+    else
+      echo "FAIL [$_rc_label]: got '$_rc_sp_actual', expected '93,94,95,96,97,98,99,100'"
+      _rc_fail=$(( _rc_fail + 1 ))
+    fi
+    rm -rf "$_rc_cachedir"
+  fi
+
   echo ""
   echo "Results: $_rc_pass passed, $_rc_fail failed, $_rc_total total"
 
