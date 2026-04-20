@@ -46,7 +46,37 @@ The redesign also retires one weak signal (always-on cache-hit ratio) and introd
 - Fish-style path abbreviation and "remaining-mode" for context (user skipped)
 - Claude Code version tag (Claude Code surfaces this natively; no value duplicating)
 - Update-available notification (Claude Code surfaces this natively)
-- Flex right-alignment in the render engine (deferred; would require a second pass for the render pipeline)
+
+### Post-2.0 feasibility notes (2026-04-20 probe)
+
+A live capture of Claude Code's stdin JSON revealed additional fields that were
+not present in the fixtures used during v2.0 design. These unlock the transcript-
+derived features above, so the "deferred" list is now "scoped but unbuilt":
+
+| Field | Availability | Unlocks |
+| --- | --- | --- |
+| `transcript_path` | present, JSONL file path | turns-counter, last-skill, idle-timer, thinking-effort |
+| `cost.total_cost_usd` | present (float) | session-cost segment |
+| `session_id` | present (UUID) | grouping/multi-session identification |
+| `version` | present (e.g. `2.1.114`) | version badge (low value; CC surfaces it) |
+| `vim.mode` | present (string) | vim-mode badge for terminal users |
+
+Transcript events include `type` tags (`user`, `assistant`, `attachment`,
+`system`, ...) with assistant content blocks for `tool_use`, `thinking`, and
+`text`. Tool-use blocks carry `.name` (e.g. `Skill`, `Bash`, `Edit`), making
+last-skill trivial. Turns-counter reduces to counting `.type=="user"` events.
+Idle-timer is a delta against the newest event's `.timestamp`.
+
+Building these would add transcript-parse cost per render. Mitigations: cache
+the last parse keyed on transcript-file mtime, or read only the tail via
+`tail -n ...`. A dedicated segment is worth doing only if the user opts in --
+the current status line is free of transcript I/O.
+
+- Flex right-alignment in the render engine (rejected; would require a second
+  pass for the render pipeline with no clear user benefit given the current
+  multi-row layout). A prototype right-slot renderer was built and removed
+  during post-2.0 review; the classic "left-justified row with end cap"
+  visual is the intended identity.
 
 ### Preserved behavior
 
