@@ -275,11 +275,15 @@ for i in $(seq 0 255); do printf '\033[48;5;%dm %3d \033[0m' "$i" "$i"; [ $(( (i
 | `PALETTE_MAGENTA` | Magenta/purple accent |
 | `PALETTE_DIM` | Comment color / dimmed text |
 
-4. **Check contrast.** The most important thing is that primary segment text is readable on its background. Test all 4 scenarios:
+4. **Check contrast.** The most important thing is that primary segment text is readable on its background. Test across the v2 scenario matrix:
 
 ```sh
-for s in minimal mid full critical; do sh test/run.sh --scenario "$s" --theme my-theme; done
+for s in minimal mid full critical rate-healthy rate-warming rate-critical rate-float; do
+  sh test/run.sh --scenario "$s" --theme my-theme
+done
 ```
+
+The `zen-full` scenario is a separate zen-layout case -- `test/run.sh --check` exercises it through the `ZEN_SCENARIOS` pass, and you can render it manually with `COLUMNS=150 CLAUDE_STATUSLINE_LAYOUT=zen CLAUDE_STATUSLINE_THEME=my-theme cat test/fixtures/zen-full.json | sh main.sh`.
 
 5. **Fine-tune.** Common adjustments when porting:
    - If the Opus (gold) or Haiku (cyan) model segment text is hard to read, override `C_OPUS_FG` or `C_HAIKU_FG`

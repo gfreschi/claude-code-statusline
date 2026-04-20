@@ -85,8 +85,9 @@ The layout adjusts automatically based on terminal width:
 
 | Tier | Width | Layout |
 |------|-------|--------|
+| **Zen** | >= 140 cols, opt-in | Three rows: session, workspace, ambient (recessed). Enable with `CLAUDE_STATUSLINE_LAYOUT=zen`. |
 | **Full** | >= 120 cols | Two rows, session + workspace |
-| **Compact** | 80-119 cols | One row: model, context, project, duration |
+| **Compact** | 80-119 cols | One row: model, context, rate-limit, project, git, duration |
 | **Micro** | < 80 cols | Minimal pill: abbreviated model, percentage, location |
 
 ### Zen layout

@@ -6,6 +6,8 @@ This project is a status line renderer for Claude Code. It processes JSON from C
 
 The main security-relevant area is **cache.sh**, which writes to a per-user temp directory. Branch names are sanitized via single-quote escaping to prevent shell injection when the cache file is sourced.
 
+Additionally, `main.sh` strips C0 control bytes from all JSON string fields at the jq extraction boundary, so segments never see raw ESC / BEL / other control characters that could spoof terminal output by hijacking ANSI sequences. Git-sourced strings (branch names, repo paths, remote URLs) are sanitized in `cache.sh` before being written to the cache file, providing a second defense layer.
+
 ## Reporting a Vulnerability
 
 If you find a security issue (especially anything related to shell injection via crafted JSON input or branch names), please report it privately:
