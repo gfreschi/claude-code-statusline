@@ -1,6 +1,14 @@
 #!/bin/sh
 # render.sh -- Rendering helpers, capability detection, platform utilities
 
+# Zsh invokes this file without honoring the #!/bin/sh shebang (it's run
+# inside the caller's zsh process when sourced, or as a zsh script when
+# the test harness does `zsh main.sh`). Zsh's default is to NOT word-split
+# unquoted parameter expansions, which breaks our `for x in $LIST` loops.
+# Enable POSIX word splitting so the same code path runs identically
+# under sh / dash / bash / zsh.
+[ -n "${ZSH_VERSION:-}" ] && setopt SH_WORD_SPLIT 2>/dev/null
+
 # --- to_int(varname, value, default) ---
 # Parses $value as an integer into $varname, or uses $default on failure.
 # Handles empty strings, floats (truncates at '.'), and non-numeric input

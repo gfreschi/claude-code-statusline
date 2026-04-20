@@ -3,6 +3,13 @@
 # Entry point: receives JSON via stdin, outputs ANSI-colored rows
 # Row count depends on terminal width tier (zen=3, full=2, compact/micro=1)
 
+# When invoked as `zsh main.sh`, zsh ignores the #!/bin/sh shebang and uses
+# its own default semantics -- notably, unquoted `$var` in a `for ... in`
+# loop is NOT word-split, which turns our space-separated segment lists
+# into a single unresolvable filename. Force POSIX word splitting so the
+# script behaves identically under sh / dash / bash / zsh.
+[ -n "${ZSH_VERSION:-}" ] && setopt SH_WORD_SPLIT 2>/dev/null
+
 set -f  # disable globbing
 
 SL_DIR="${0%/*}"
