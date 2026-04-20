@@ -45,7 +45,7 @@ sh test/run.sh --scenario full    # verify everything works
 
 ```sh
 # Syntax check all files
-find . -name '*.sh' -print0 | xargs -0 -I{} sh -c 'sh -n "$1" || echo "FAIL: $1"' _ {}
+find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 -I{} sh -c 'sh -n "$1" || echo "FAIL: $1"' _ {}
 
 # Check for bashisms
 grep -rn '\[\[' --include='*.sh' .
@@ -60,6 +60,25 @@ sh test/run.sh --check
 
 4. **Commit** using [conventional commits](#commit-conventions)
 5. **Open a PR** with a clear description of what and why
+
+### Regenerating the README GIFs
+
+The `images/*.gif` files are produced by [vhs](https://github.com/charmbracelet/vhs). Each GIF has a matching `*.tape` file that drives a helper `render-*.sh` script in the same directory. Run VHS interactively (requires a real terminal -- CI / headless environments cannot render):
+
+```sh
+brew install vhs                          # macOS; see vhs README for other platforms
+
+vhs images/demo.tape                      # hero GIF (demo.gif)
+vhs images/tiers.tape                     # zen + full + compact + micro (tiers.gif)
+vhs images/themes.tape                    # theme switcher (themes.gif)
+vhs images/rate-styles.tape               # rate-limit presets (rate-styles.gif)
+vhs images/ctx-gauges.tape                # context gauge variants (ctx-gauges.gif)
+vhs images/caps.tape                      # powerline vs capsule caps (caps.gif)
+
+for t in images/theme-*.tape; do vhs "$t"; done   # individual theme previews
+```
+
+Renders are sequential (VHS owns the PTY). A full rebuild takes ~3-5 minutes. The Catppuccin Mocha palette hardcoded in every tape matches the bundled default theme -- change it in the tape header if you port to a different default.
 
 ---
 
@@ -98,9 +117,9 @@ Before submitting:
 
 - [ ] All `.sh` files pass `sh -n` syntax check
 - [ ] No bashisms (`[[ ]]`, `local`, `declare`, arrays, process substitution)
-- [ ] All 4 test scenarios render correctly across all 3 tiers
+- [ ] All 8 scenarios (+ zen-full) render correctly across all tiers (micro / compact / full / zen)
 - [ ] All 4 bundled themes render correctly
-- [ ] `sh test/run.sh --check` passes (all 48 combinations)
+- [ ] `sh test/run.sh --check` passes (all 100 combinations)
 - [ ] Commit messages follow conventional commits format
 
 **Scope:** Keep PRs focused. One segment, one theme, or one fix per PR. If a change touches multiple concerns, split it.
@@ -128,9 +147,64 @@ sh test/run.sh --check
 
 1. Create `lib/segments/my-segment.sh` with a `segment_my_segment()` function
 2. Set all `_seg_*` metadata variables, return 0 to render or 1 to skip
-3. Add `segment_my_segment` to `SL_SEGMENTS` in `main.sh` at the desired position
-4. Run syntax check: `sh -n lib/segments/my-segment.sh`
-5. Run test harness: `sh test/run.sh --scenario full`
+3. Pick a row group via `_seg_group`:
+   - `session` -- Row 1 (model-adjacent signals)
+   - `workspace` -- Row 2 (repo / cwd context)
+   - `ambient` -- Row 3, zen only (recessed supplemental info)
+4. If the segment belongs on the `ambient` row but should still show in classic mode, set `_seg_group_fallback=session` or `_seg_group_fallback=workspace`. Leave it empty to hide the segment outside zen.
+5. Set `_seg_min_tier` to the narrowest tier that should render it (`micro`, `compact`, `full`). Use `zen` only as a readability hint and self-gate inside the function: `[ "$_sl_layout" != "zen" ] && return 1`.
+6. Add `segment_my_segment` to `SL_SEGMENTS` in `main.sh` at the desired left-to-right position
+7. Run syntax check: `sh -n lib/segments/my-segment.sh`
+8. Run test harness: `sh test/run.sh --scenario full`
+
+Skeleton:
+
+```sh
+#!/bin/sh
+# segments/my-segment.sh -- short description
+
+segment_my_segment() {
+  # Guard: skip when required inputs are missing
+  [ -z "$sl_some_field" ] && return 1
+
+  _seg_weight="tertiary"
+  _seg_min_tier="full"
+  _seg_group="workspace"
+  _seg_group_fallback=""   # only needed if _seg_group="ambient"
+  _seg_icon="$GL_SOME_ICON"
+  _seg_content="label ${sl_some_field}"
+  _seg_attrs=""
+  _seg_detail=""
+  _seg_link_url=""
+
+  return 0
+}
+```
+
+### Row groups in zen mode
+
+Zen layout (opt-in via `CLAUDE_STATUSLINE_LAYOUT=zen`, requires >= 140 cols) renders three rows instead of two. The extra row is the `ambient` group: recessed-weight, muted, supplemental info.
+
+The group system works like this:
+
+- `_seg_group` declares where a segment wants to live in zen.
+- `_seg_group_fallback` declares where it should live in classic (`$_sl_layout=classic`). An empty fallback means the segment is simply skipped outside zen.
+- `_seg_group=ambient` is reserved for the zen ambient row. The orchestrator force-demotes any non-recessed weight on an ambient segment to `recessed` -- the ambient row is recessed-only by contract.
+
+Example: `segment_info_slot` declares `_seg_group=ambient` with `_seg_group_fallback=workspace`, so it lives on Row 3 in zen and on Row 2 in classic. `segment_rate_limit_7d_stable` declares `_seg_group=ambient` with no fallback, so it appears only in zen.
+
+### Priority-rotation pattern
+
+`segment_alerts_slot` and `segment_info_slot` both follow a priority-rotation pattern: they check a list of conditions in order and emit **the first match only**, falling through to `return 1` (or, for `info_slot`, a clock fallback) when nothing fires.
+
+The rotation keeps width budget low -- at most one extra pill per row, regardless of how many conditions apply. When a new slot signal is added, insert it at the correct position in the chain and keep the `_is_hit=0` / `_is_hit=1` guard pattern so later checks skip once a higher-priority one has already claimed the slot.
+
+Current priorities (canonical):
+
+- **`alerts_slot`** (Row 1, session): cache hit ratio < 70% -> added-dirs count > 0 -> (zen only) 7d rate >= 70%.
+- **`info_slot`** (Row 3 ambient with workspace fallback): non-default output style -> cwd drift below `project_dir` -> `session_name` set -> clock fallback.
+
+When authoring a new slot, document the full priority order in the file header and match the existing `_is_hit` pattern so the behaviour stays easy to audit.
 
 See [`CLAUDE.md`](CLAUDE.md) for the full segment contract, metadata variable reference, and variable naming conventions.
 
@@ -220,11 +294,15 @@ for i in $(seq 0 255); do printf '\033[48;5;%dm %3d \033[0m' "$i" "$i"; [ $(( (i
 | `PALETTE_MAGENTA` | Magenta/purple accent |
 | `PALETTE_DIM` | Comment color / dimmed text |
 
-4. **Check contrast.** The most important thing is that primary segment text is readable on its background. Test all 4 scenarios:
+4. **Check contrast.** The most important thing is that primary segment text is readable on its background. Test across the v2 scenario matrix:
 
 ```sh
-for s in minimal mid full critical; do sh test/run.sh --scenario "$s" --theme my-theme; done
+for s in minimal mid full critical rate-healthy rate-warming rate-critical rate-float; do
+  sh test/run.sh --scenario "$s" --theme my-theme
+done
 ```
+
+The `zen-full` scenario is a separate zen-layout case -- `test/run.sh --check` exercises it through the `ZEN_SCENARIOS` pass, and you can render it manually with `COLUMNS=150 CLAUDE_STATUSLINE_LAYOUT=zen CLAUDE_STATUSLINE_THEME=my-theme cat test/fixtures/zen-full.json | sh main.sh`.
 
 5. **Fine-tune.** Common adjustments when porting:
    - If the Opus (gold) or Haiku (cyan) model segment text is hard to read, override `C_OPUS_FG` or `C_HAIKU_FG`

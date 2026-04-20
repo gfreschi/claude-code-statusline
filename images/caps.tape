@@ -1,9 +1,9 @@
-Output images/tiers.gif
+Output images/caps.gif
 
 Set FontFamily "JetBrainsMono Nerd Font"
 Set FontSize 18
 Set Width 1300
-Set Height 340
+Set Height 260
 Set Padding 20
 Set MarginFill "#1e1e2e"
 Set WindowBar "Colorful"
@@ -27,6 +27,6 @@ Enter
 Type "clear"
 Enter
 Sleep 500ms
-Type "sh images/render-tiers.sh"
+Type "sh images/render-caps.sh"
 Enter
-Sleep 14s
+Sleep 10s

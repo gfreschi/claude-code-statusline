@@ -3,8 +3,8 @@
 # Reads: sl_lines_added, sl_lines_removed
 
 segment_lines() {
-  _li_add=$(( sl_lines_added + 0 )) 2>/dev/null || _li_add=0
-  _li_rem=$(( sl_lines_removed + 0 )) 2>/dev/null || _li_rem=0
+  to_int _li_add "$sl_lines_added" 0
+  to_int _li_rem "$sl_lines_removed" 0
 
   [ "$_li_add" -le 0 ] && [ "$_li_rem" -le 0 ] && return 1
 

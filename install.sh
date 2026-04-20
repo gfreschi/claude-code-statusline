@@ -11,6 +11,10 @@ REPO_URL="https://github.com/gfreschi/claude-code-statusline.git"
 INSTALL_DIR="${CLAUDE_STATUSLINE_DIR:-$HOME/.claude/statusline}"
 SETTINGS_FILE="$HOME/.claude/settings.json"
 STATUSLINE_CMD="sh $INSTALL_DIR/main.sh"
+# Modern Claude Code schema expects the object form. Both the legacy bare
+# string and this object are accepted, but the object is what Claude Code
+# itself writes when configured interactively, so prefer it for consistency.
+STATUSLINE_JQ='{type: "command", command: $cmd}'
 
 # --- Helpers ---
 
@@ -47,24 +51,44 @@ do_install() {
   echo "Cloning to $INSTALL_DIR..."
   git clone --quiet "$REPO_URL" "$INSTALL_DIR"
 
-  # Patch settings.json
+  # Patch settings.json. Uses the object form Claude Code writes natively
+  # (`{"statusLine": {"type": "command", "command": "sh ..."}}`). Accepts
+  # either the object form or a legacy bare-string value as "already
+  # configured" so existing users are not re-prompted on every update.
   if [ ! -f "$SETTINGS_FILE" ]; then
     mkdir -p "$(dirname "$SETTINGS_FILE")"
-    printf '{\n  "statusLine": "%s"\n}\n' "$STATUSLINE_CMD" > "$SETTINGS_FILE"
+    jq -n --arg cmd "$STATUSLINE_CMD" \
+      "{statusLine: $STATUSLINE_JQ}" > "$SETTINGS_FILE"
     echo "Created $SETTINGS_FILE"
   else
-    _di_current=$(jq -r '.statusLine // empty' "$SETTINGS_FILE" 2>/dev/null)
+    _di_type=$(jq -r '.statusLine | type' "$SETTINGS_FILE" 2>/dev/null)
+    _di_current=""
+    case "$_di_type" in
+      object) _di_current=$(jq -r '.statusLine.command // empty' "$SETTINGS_FILE" 2>/dev/null) ;;
+      string) _di_current=$(jq -r '.statusLine // empty' "$SETTINGS_FILE" 2>/dev/null) ;;
+    esac
     _di_tmp="${SETTINGS_FILE}.tmp.$$"
     if [ -z "$_di_current" ]; then
-      jq --arg cmd "$STATUSLINE_CMD" '. + {statusLine: $cmd}' "$SETTINGS_FILE" > "$_di_tmp"
+      jq --arg cmd "$STATUSLINE_CMD" \
+        ". + {statusLine: $STATUSLINE_JQ}" "$SETTINGS_FILE" > "$_di_tmp"
       mv "$_di_tmp" "$SETTINGS_FILE"
       echo "Added statusLine to $SETTINGS_FILE"
     elif [ "$_di_current" = "$STATUSLINE_CMD" ]; then
-      echo "Settings already configured"
+      # Upgrade legacy string form to the object form in-place, without
+      # prompting -- the command value is already ours.
+      if [ "$_di_type" = "string" ]; then
+        jq --arg cmd "$STATUSLINE_CMD" \
+          ".statusLine = $STATUSLINE_JQ" "$SETTINGS_FILE" > "$_di_tmp"
+        mv "$_di_tmp" "$SETTINGS_FILE"
+        echo "Migrated statusLine to object form in $SETTINGS_FILE"
+      else
+        echo "Settings already configured"
+      fi
     else
       echo "Current statusLine: $_di_current"
       if [ "$_is_force" -eq 1 ] || confirm "Replace with '$STATUSLINE_CMD'?"; then
-        jq --arg cmd "$STATUSLINE_CMD" '.statusLine = $cmd' "$SETTINGS_FILE" > "$_di_tmp"
+        jq --arg cmd "$STATUSLINE_CMD" \
+          ".statusLine = $STATUSLINE_JQ" "$SETTINGS_FILE" > "$_di_tmp"
         mv "$_di_tmp" "$SETTINGS_FILE"
         echo "Updated statusLine in $SETTINGS_FILE"
       else

@@ -13,7 +13,7 @@ segment_context() {
   _seg_icon="$GL_CTX"
   _seg_attrs=""
 
-  _cx_pct=$(( sl_used_pct + 0 )) 2>/dev/null || _cx_pct=0
+  to_int _cx_pct "$sl_used_pct" 0
 
   # Color threshold
   if [ "$_cx_pct" -ge 95 ]; then
@@ -41,14 +41,10 @@ segment_context() {
   _cx_dots=""
   _cx_tokens=""
   _cx_prefix=""
-  _cx_size_val=$(( sl_ctx_size + 0 )) 2>/dev/null || _cx_size_val=0
+  to_int _cx_size_val "$sl_ctx_size" 0
 
   if [ "$_sl_tier" != "micro" ]; then
-    _cx_filled=$(( _cx_pct / 20 ))
-    [ "$_cx_filled" -gt 5 ] && _cx_filled=5
-    _cx_empty=$(( 5 - _cx_filled ))
-    _cx_i=0; while [ "$_cx_i" -lt "$_cx_filled" ]; do _cx_dots="${_cx_dots}${GL_DOT_FILLED}"; _cx_i=$((_cx_i+1)); done
-    _cx_i=0; while [ "$_cx_i" -lt "$_cx_empty" ];  do _cx_dots="${_cx_dots}${GL_DOT_EMPTY}";  _cx_i=$((_cx_i+1)); done
+    ctx_gauge_render _cx_dots "$_cx_pct"
 
     if [ "$_cx_size_val" -gt 0 ]; then
       _cx_used_tok=$(( _cx_size_val * _cx_pct / 100 ))
@@ -73,7 +69,7 @@ segment_context() {
       # Compaction countdown (full tier only)
       _cx_compact=""
       _cx_compact_pct="${CLAUDE_AUTOCOMPACT_PCT_OVERRIDE:-95}"
-      _cx_dur_val=$(( sl_duration_ms + 0 )) 2>/dev/null || _cx_dur_val=0
+      to_int _cx_dur_val "$sl_duration_ms" 0
 
       if [ "$_cx_dur_val" -ge 60000 ] && [ "$_cx_pct" -ge 50 ] && [ "$_cx_pct" -lt 95 ] && [ "$_cx_size_val" -gt 0 ]; then
         _cx_current=$(( _cx_size_val * _cx_pct / 100 ))
@@ -96,6 +92,11 @@ segment_context() {
       _seg_content="${_cx_prefix}${_cx_dots} ${_cx_pct}%${_cx_tokens}${_cx_compact}"
       ;;
   esac
+
+  # Minimalist override: drop "compact" label suffix (keeps dots + pct + tokens)
+  if [ "${CLAUDE_STATUSLINE_MINIMAL:-0}" = "1" ]; then
+    _seg_content=$(printf '%s' "$_seg_content" | sed 's/ compact [^ ]*//')
+  fi
 
   return 0
 }

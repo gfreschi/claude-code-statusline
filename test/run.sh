@@ -6,13 +6,44 @@
 #   sh test/run.sh --scenario full --theme nord # visual: one scenario, specific theme
 #   sh test/run.sh --check                      # CI: assert all combinations, exit 0/1
 #   sh test/run.sh --check --shell dash         # CI: run main.sh under specific shell
+#   sh test/run.sh --bench                      # benchmark: 10 zen-full renders, fail on slow
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$DIR/.." && pwd)"
 
+# --- Bench mode (short-circuits before normal flag parsing) ---
+if [ "${1:-}" = "--bench" ]; then
+  # Thresholds calibrated for the v2.0 hot path: jq fixed cost (~25-30ms) +
+  # segment iteration across 3 row groups in zen mode + git cache refresh.
+  # These are regression guards, not aspirational targets. Future perf work
+  # (collapsing the sparkline glyph pipeline, caching rendered segments across
+  # row passes) could lower these substantially.
+  _thr_ms=100
+  uname -s | grep -qi linux && _thr_ms=60
+  _tot_ms=0
+  for _i in 1 2 3 4 5 6 7 8 9 10; do
+    _start=$(date +%s%N 2>/dev/null || python3 -c 'import time; print(int(time.time()*1e9))')
+    COLUMNS=150 CLAUDE_STATUSLINE_LAYOUT=zen cat "$DIR/fixtures/zen-full.json" | sh "$PROJECT_ROOT/main.sh" > /dev/null
+    _end=$(date +%s%N 2>/dev/null || python3 -c 'import time; print(int(time.time()*1e9))')
+    _delta_ms=$(( (_end - _start) / 1000000 ))
+    _tot_ms=$(( _tot_ms + _delta_ms ))
+  done
+  _avg_ms=$(( _tot_ms / 10 ))
+  echo "Average render: ${_avg_ms}ms (threshold: ${_thr_ms}ms)"
+  if [ "$_avg_ms" -gt "$_thr_ms" ]; then
+    echo "FAIL: exceeds threshold"
+    exit 1
+  fi
+  echo "PASS"
+  exit 0
+fi
+
 # Bundled themes and scenarios for iteration
 ALL_THEMES="catppuccin-mocha bluloco-dark dracula nord"
-ALL_SCENARIOS="minimal mid full critical"
+ALL_SCENARIOS="minimal mid full critical rate-healthy rate-warming rate-critical rate-float"
+# Zen-mode scenarios run under their own layout/COLUMNS combo (see run_check).
+ZEN_SCENARIOS="zen-full"
+ZEN_COLS=150
 TIERS="full compact micro"
 TIER_COLS_full=140
 TIER_COLS_compact=100
@@ -121,6 +152,85 @@ run_check() {
       done
     done
   done
+
+  # Zen layout matrix: only runs when the user hasn't narrowed via --scenario,
+  # or when --scenario explicitly names a zen fixture.
+  for _rc_theme in $_rc_themes; do
+    for _rc_scn in $ZEN_SCENARIOS; do
+      # If the user passed --scenario, honor it: skip zen fixtures not matching.
+      if [ -n "$_tr_scenario" ] && [ "$_tr_scenario" != "$_rc_scn" ]; then
+        continue
+      fi
+      _rc_fixture="$DIR/fixtures/${_rc_scn}.json"
+      if [ ! -f "$_rc_fixture" ]; then
+        echo "FAIL: unknown zen scenario $_rc_scn" >&2
+        _rc_fail=$(( _rc_fail + 1 ))
+        _rc_total=$(( _rc_total + 1 ))
+        continue
+      fi
+      _rc_json=$(cat "$_rc_fixture")
+      _rc_total=$(( _rc_total + 1 ))
+      _rc_label="${_rc_theme}/${_rc_scn}/zen"
+
+      _rc_output=$(echo "$_rc_json" | COLUMNS="$ZEN_COLS" CLAUDE_STATUSLINE_LAYOUT=zen CLAUDE_STATUSLINE_THEME="$_rc_theme" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>&1)
+      _rc_exit=$?
+
+      if [ "$_rc_exit" -ne 0 ]; then
+        echo "FAIL [$_rc_label]: exit code $_rc_exit"
+        _rc_fail=$(( _rc_fail + 1 ))
+        continue
+      fi
+
+      if [ -z "$_rc_output" ]; then
+        echo "FAIL [$_rc_label]: empty output"
+        _rc_fail=$(( _rc_fail + 1 ))
+        continue
+      fi
+
+      case "$_rc_output" in
+        *_seg_weight=*|*_seg_content=*|*_seg_bg=*|*_seg_fg=*|*_seg_icon=*)
+          echo "FAIL [$_rc_label]: _seg_ variable leak in output"
+          _rc_fail=$(( _rc_fail + 1 ))
+          continue
+          ;;
+      esac
+
+      echo "PASS [$_rc_label]"
+      _rc_pass=$(( _rc_pass + 1 ))
+    done
+  done
+
+  # Sparkline ring-buffer integration: push 100 samples into an isolated cache
+  # dir, then verify exactly 8 are retained in insertion order. Guards the
+  # perf-pass rewrite from regressing the ring semantics.
+  _rc_total=$(( _rc_total + 1 ))
+  _rc_label="sparkline/ring-100-pushes"
+  _rc_cachedir=$(mktemp -d "${TMPDIR:-/tmp}/cc-sl-test.XXXXXX" 2>/dev/null)
+  if [ -z "$_rc_cachedir" ]; then
+    echo "FAIL [$_rc_label]: mktemp failed"
+    _rc_fail=$(( _rc_fail + 1 ))
+  else
+    _rc_sp_actual=$(
+      SL_CACHE_DIR="$_rc_cachedir" "$_tr_shell" -c '
+        SL_DIR="'"$PROJECT_ROOT"'"
+        SL_LIB="$SL_DIR/lib"
+        . "$SL_LIB/render.sh"
+        detect_platform
+        . "$SL_LIB/cache.sh"
+        _i=1
+        while [ "$_i" -le 100 ]; do sparkline_push "$_i"; _i=$((_i+1)); done
+        sparkline_read
+      '
+    )
+    if [ "$_rc_sp_actual" = "93,94,95,96,97,98,99,100" ]; then
+      echo "PASS [$_rc_label]"
+      _rc_pass=$(( _rc_pass + 1 ))
+    else
+      echo "FAIL [$_rc_label]: got '$_rc_sp_actual', expected '93,94,95,96,97,98,99,100'"
+      _rc_fail=$(( _rc_fail + 1 ))
+    fi
+    rm -rf "$_rc_cachedir"
+  fi
 
   echo ""
   echo "Results: $_rc_pass passed, $_rc_fail failed, $_rc_total total"
