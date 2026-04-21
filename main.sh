@@ -99,7 +99,11 @@ sl_model_short="${sl_model_name#Claude }"
 [ -z "$sl_model_short" ] && sl_model_short="Claude"
 
 sl_project=""
-[ -n "$sl_cwd" ] && sl_project="${sl_cwd##*/}"
+if [ -n "$sl_project_dir" ]; then
+  sl_project="${sl_project_dir##*/}"
+elif [ -n "$sl_cwd" ]; then
+  sl_project="${sl_cwd##*/}"
+fi
 
 # Refresh git cache
 . "$SL_LIB/cache.sh"
