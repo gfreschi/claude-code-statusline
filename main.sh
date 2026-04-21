@@ -112,7 +112,11 @@ cache_refresh
 # Memoize the current epoch. Several segments need it for "time until reset"
 # math; without this each one forks `date +%s` independently, which adds up
 # fast under zen's multi-pass layout.
-_sl_now=$(date +%s)
+#
+# CLAUDE_STATUSLINE_NOW_OVERRIDE: test hook that lets fixtures carry
+# absolute resets_at timestamps relative to a fixed epoch, so snapshots do
+# not drift as wall-clock time advances.
+_sl_now="${CLAUDE_STATUSLINE_NOW_OVERRIDE:-$(date +%s)}"
 
 # Push one burn-rate sample per render into the sparkline ring buffer.
 # This MUST happen once per render, not per row group -- segment functions

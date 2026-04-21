@@ -11,6 +11,11 @@
 DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$DIR/.." && pwd)"
 
+# Frozen wall clock for rate-limit fixtures. Fixtures carry resets_at values
+# relative to this epoch, so time-remaining math stays deterministic across
+# test runs regardless of when the suite is invoked.
+TEST_NOW=1800000000
+
 # --- Bench mode (short-circuits before normal flag parsing) ---
 if [ "${1:-}" = "--bench" ]; then
   # Thresholds calibrated for the v2.0 hot path: jq fixed cost (~25-30ms) +
@@ -23,7 +28,7 @@ if [ "${1:-}" = "--bench" ]; then
   _tot_ms=0
   for _i in 1 2 3 4 5 6 7 8 9 10; do
     _start=$(date +%s%N 2>/dev/null || python3 -c 'import time; print(int(time.time()*1e9))')
-    COLUMNS=150 CLAUDE_STATUSLINE_LAYOUT=zen cat "$DIR/fixtures/zen-full.json" | sh "$PROJECT_ROOT/main.sh" > /dev/null
+    COLUMNS=150 CLAUDE_STATUSLINE_LAYOUT=zen CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" cat "$DIR/fixtures/zen-full.json" | COLUMNS=150 CLAUDE_STATUSLINE_LAYOUT=zen CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" sh "$PROJECT_ROOT/main.sh" > /dev/null
     _end=$(date +%s%N 2>/dev/null || python3 -c 'import time; print(int(time.time()*1e9))')
     _delta_ms=$(( (_end - _start) / 1000000 ))
     _tot_ms=$(( _tot_ms + _delta_ms ))
@@ -89,7 +94,7 @@ run_visual() {
     for _rv_tier in $TIERS; do
       eval "_rv_cols=\$TIER_COLS_${_rv_tier}"
       echo "--- ${_rv_tier} tier (COLUMNS=${_rv_cols}) ---"
-      echo "$_rv_json" | COLUMNS="$_rv_cols" CLAUDE_STATUSLINE_THEME="$_rv_theme" "$_tr_shell" "$PROJECT_ROOT/main.sh"
+      echo "$_rv_json" | COLUMNS="$_rv_cols" CLAUDE_STATUSLINE_THEME="$_rv_theme" CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" "$_tr_shell" "$PROJECT_ROOT/main.sh"
       echo ""
     done
   done
@@ -121,7 +126,7 @@ run_check() {
         _rc_label="${_rc_theme}/${_rc_scn}/${_rc_tier}"
 
         # Run main.sh and capture output + exit code
-        _rc_output=$(echo "$_rc_json" | COLUMNS="$_rc_cols" CLAUDE_STATUSLINE_THEME="$_rc_theme" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>&1)
+        _rc_output=$(echo "$_rc_json" | COLUMNS="$_rc_cols" CLAUDE_STATUSLINE_THEME="$_rc_theme" CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>&1)
         _rc_exit=$?
 
         # Assert: exit code 0
@@ -172,7 +177,7 @@ run_check() {
       _rc_total=$(( _rc_total + 1 ))
       _rc_label="${_rc_theme}/${_rc_scn}/zen"
 
-      _rc_output=$(echo "$_rc_json" | COLUMNS="$ZEN_COLS" CLAUDE_STATUSLINE_LAYOUT=zen CLAUDE_STATUSLINE_THEME="$_rc_theme" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>&1)
+      _rc_output=$(echo "$_rc_json" | COLUMNS="$ZEN_COLS" CLAUDE_STATUSLINE_LAYOUT=zen CLAUDE_STATUSLINE_THEME="$_rc_theme" CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>&1)
       _rc_exit=$?
 
       if [ "$_rc_exit" -ne 0 ]; then
