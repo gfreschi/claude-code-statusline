@@ -275,6 +275,17 @@ run_check() {
   _rc_snap_theme="catppuccin-mocha"
   _rc_snap_seed="100,200,300,400,500,600,700,800"
 
+  # mktemp -d wrapper that fails loudly instead of silently falling through
+  # with SL_CACHE_DIR="" (which cache.sh would happily accept, producing
+  # non-deterministic snapshot state).
+  make_snap_cache() {
+    _ms_dir=$(mktemp -d "${TMPDIR:-/tmp}/sl-snap.XXXXXX" 2>/dev/null) || {
+      echo "FAIL: mktemp -d failed; cannot isolate cache dir for snapshots" >&2
+      exit 1
+    }
+    printf '%s' "$_ms_dir"
+  }
+
   seed_snap_cache() {
     mkdir -p "$1"
     printf '%s\n' "$_rc_snap_seed" > "$1/burn-history"
@@ -288,7 +299,7 @@ run_check() {
       eval "_rc_cols=\$TIER_COLS_${_rc_tier}"
       _rc_total=$(( _rc_total + 1 ))
       _rc_label="snap/${_rc_scn}/${_rc_tier}"
-      _rc_snapcache=$(mktemp -d "${TMPDIR:-/tmp}/sl-snap.XXXXXX" 2>/dev/null)
+      _rc_snapcache=$(make_snap_cache)
       seed_snap_cache "$_rc_snapcache"
       _rc_raw=$(echo "$_rc_json" | COLUMNS="$_rc_cols" CLAUDE_STATUSLINE_THEME="$_rc_snap_theme" CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" SL_CACHE_DIR="$_rc_snapcache" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>/dev/null)
       rm -rf "$_rc_snapcache"
@@ -313,7 +324,7 @@ run_check() {
     _rc_json=$(cat "$_rc_fixture")
     _rc_total=$(( _rc_total + 1 ))
     _rc_label="snap/${_rc_scn}/zen"
-    _rc_snapcache=$(mktemp -d "${TMPDIR:-/tmp}/sl-snap.XXXXXX" 2>/dev/null)
+    _rc_snapcache=$(make_snap_cache)
     seed_snap_cache "$_rc_snapcache"
     _rc_raw=$(echo "$_rc_json" | COLUMNS="$ZEN_COLS" CLAUDE_STATUSLINE_LAYOUT=zen CLAUDE_STATUSLINE_THEME="$_rc_snap_theme" CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" SL_CACHE_DIR="$_rc_snapcache" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>/dev/null)
     rm -rf "$_rc_snapcache"
@@ -337,7 +348,7 @@ run_check() {
     _rc_json=$(cat "$_rc_fixture")
     _rc_total=$(( _rc_total + 1 ))
     _rc_label="snap/${_rc_scn}/full-ascii"
-    _rc_snapcache=$(mktemp -d "${TMPDIR:-/tmp}/sl-snap.XXXXXX" 2>/dev/null)
+    _rc_snapcache=$(make_snap_cache)
     seed_snap_cache "$_rc_snapcache"
     _rc_raw=$(echo "$_rc_json" | COLUMNS="140" CLAUDE_STATUSLINE_THEME="$_rc_snap_theme" CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" CLAUDE_STATUSLINE_NERD_FONT=0 LANG=C LC_ALL=C SL_CACHE_DIR="$_rc_snapcache" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>/dev/null)
     rm -rf "$_rc_snapcache"
@@ -350,6 +361,41 @@ run_check() {
       _rc_fail=$(( _rc_fail + 1 ))
     fi
   done
+
+  # OSC 8 hyperlink integration: fixtures use synthetic cwd paths that skip
+  # the git-dir probe in cache.sh, so sl_github_base_url is always empty and
+  # the orchestrator's OSC 8 wrap branch is dead under regular snapshots.
+  # This check runs main.sh against the real project repo so OSC 8 actually
+  # fires, then verifies:
+  #   (a) the output contains a real ESC 0x1b `]8;;` sequence, not the
+  #       ETX 0x03 `3]8;;` pattern that a broken `\0033` format string
+  #       produces (v2.0.1 shipped that bug once);
+  #   (b) no stray ETX bytes appear anywhere in the rendered output.
+  _rc_total=$(( _rc_total + 1 ))
+  _rc_label="osc8/project-root"
+  _rc_osc8_cache=$(make_snap_cache)
+  _rc_osc8_json=$(printf '{"cwd":"%s","model":{"id":"claude-opus-4-7","display_name":"Claude Opus"},"context_window":{"used_percentage":10,"context_window_size":200000},"cost":{"total_duration_ms":120000}}' "$PROJECT_ROOT")
+  _rc_osc8_raw=$(printf '%s' "$_rc_osc8_json" | COLUMNS=130 CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" SL_CACHE_DIR="$_rc_osc8_cache" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>/dev/null)
+  rm -rf "$_rc_osc8_cache"
+  # (a) real ESC + ]8;;
+  if printf '%s' "$_rc_osc8_raw" | grep -q "$(printf '\033]8;;')"; then
+    _rc_osc8_ok_a=1
+  else
+    _rc_osc8_ok_a=0
+  fi
+  # (b) no ETX 0x03 anywhere
+  if printf '%s' "$_rc_osc8_raw" | grep -q "$(printf '\003')"; then
+    _rc_osc8_ok_b=0
+  else
+    _rc_osc8_ok_b=1
+  fi
+  if [ "$_rc_osc8_ok_a" -eq 1 ] && [ "$_rc_osc8_ok_b" -eq 1 ]; then
+    echo "PASS [$_rc_label]"
+    _rc_pass=$(( _rc_pass + 1 ))
+  else
+    echo "FAIL [$_rc_label]: osc8_start=$_rc_osc8_ok_a no_etx=$_rc_osc8_ok_b"
+    _rc_fail=$(( _rc_fail + 1 ))
+  fi
 
   # Sparkline ring-buffer integration: push 100 samples into an isolated cache
   # dir, then verify exactly 8 are retained in insertion order. Guards the

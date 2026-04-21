@@ -18,22 +18,27 @@ to_int() {
   _ti_val="$2"
   # Floor floats by stripping the fractional tail.
   case "$_ti_val" in *.*) _ti_val="${_ti_val%%.*}" ;; esac
+  # Reject empty, non-numeric, bare "-", "-foo", and any embedded dash
+  # ("5-6", "1-2-3") so arithmetic never sees a malformed integer.
   case "$_ti_val" in
-    ''|*[!0-9-]*|-*[!0-9]*) eval "$1=\$3" ;;
+    ''|-|*[!0-9-]*|-*[!0-9]*|*-*-*|*[0-9]-*) eval "$1=\$3" ;;
     *) eval "$1=\$_ti_val" ;;
   esac
 }
 
 # --- sl_truncate(varname, text, max_len) ---
-# If `text` is longer than max_len chars, writes `prefix + GL_ELLIPSIS` to
-# varname, where prefix is the first max_len-1 characters. Otherwise writes
+# If `text` is longer than max_len bytes, writes `prefix + GL_ELLIPSIS` to
+# varname, where prefix is the first max_len-1 bytes. Otherwise writes
 # text unchanged.
 #
-# Note: ${#STRING} counts bytes, not display columns, under POSIX sh. We
-# only call this on Latin-1-clean inputs (branch names, agent names,
-# project paths) so byte count and column count agree. GL_ELLIPSIS is
-# counted as one column even in ASCII fallback (`..`, 2 chars); the tiny
-# overflow in non-unicode terminals is acceptable.
+# Caveats:
+#   - ${#STRING} counts bytes, not codepoints, under dash / POSIX sh.
+#     Multi-byte UTF-8 labels (e.g. a branch name with accents) can be
+#     cut mid-codepoint, leaving a replacement-char tail. The call sites
+#     all accept user-supplied labels, and a stray U+FFFD at the end is
+#     visually no worse than no-truncation overflow.
+#   - GL_ELLIPSIS is counted as one column even in ASCII fallback
+#     (`..`, 2 bytes); ASCII-fallback output may overrun max_len by 1.
 sl_truncate() {
   _tr_var="$1"
   _tr_text="$2"
@@ -244,18 +249,6 @@ emit_end() {
   fi
 }
 
-# --- osc8_link(url, text) ---
-# Wraps text in OSC 8 hyperlink if supported, otherwise plain text
-osc8_link() {
-  _ol_url="$1"
-  _ol_text="$2"
-  if [ "$SL_CAP_OSC8" -eq 1 ] && [ -n "$_ol_url" ]; then
-    printf '\0033]8;;%s\a%s\0033]8;;\a' "$_ol_url" "$_ol_text"
-  else
-    printf '%s' "$_ol_text"
-  fi
-}
-
 # --- format_tokens(varname, count) ---
 # Sets varname to formatted token count: raw <1000, Xk for 1000+, X.Xm for 1M+
 format_tokens() {
@@ -462,8 +455,12 @@ render_row() {
 
     # OSC 8 link wrap: the escape sequences bracket the entire padded text
     # so any SGR attributes live inside the link rather than straddling it.
+    #
+    # `\033` (not `\0033`) in a printf FORMAT string: greedy 1-3 octal
+    # digits match 033 exactly = ESC. `\0033` would parse as `\003` + `3`
+    # and emit an ETX control byte instead.
     if [ "$SL_CAP_OSC8" -eq 1 ] && [ -n "$_seg_link_url" ]; then
-      _rr_text=$(printf '\0033]8;;%s\a%s\0033]8;;\a' "$_seg_link_url" "$_rr_text")
+      _rr_text=$(printf '\033]8;;%s\a%s\033]8;;\a' "$_seg_link_url" "$_rr_text")
     fi
 
     # Emit based on weight

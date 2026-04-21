@@ -87,11 +87,16 @@ snapshot tests so these regressions cannot recur.
 
 ### Changed
 
-- **7-day rate-limit renders in classic layouts too.** Dedicated
-  `rate_limit_7d_stable` segment now emits on the session row in classic
-  (tertiary weight) when `_sl_cols >= 150`. Zen behaviour unchanged
-  (row 3, recessed). Inline `7d {pct}% used` fragment in the 5h pill is
-  retired.
+- **7-day rate-limit is always visible in zen ambient row.** Previously
+  self-gated to `< 70%`; in crit cases (>=70%), the alerts-slot on
+  Row 1 is the only surface, and it can be occupied by a higher-priority
+  cache-poor or added-dirs signal. Zen ambient row now renders the stable
+  pill unconditionally, with FG escalation at 70%/85% thresholds. Classic
+  retains the `< 70%` gate (alerts-slot handles crit there) plus a
+  `_sl_cols >= 150` floor so Row 1 does not overflow.
+- **Inline `7d {pct}% used` fragment** in the 5h rate-limit pill is
+  retired; the dedicated `rate_limit_7d_stable` segment owns the 7d
+  signal in both layouts.
 - **Test suite grew snapshot assertions.** `test/run.sh --check` now
   diffs ANSI-stripped rendered output against `test/snapshots/*.txt`
   golden files. `--update-snapshots` regenerates them. 126/126 on

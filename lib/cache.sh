@@ -96,7 +96,7 @@ cache_refresh() {
     elif [ -f "$_cr_gitdir/MERGE_HEAD" ]; then
       sl_git_op="MERGING"
     elif [ -f "$_cr_gitdir/CHERRY_PICK_HEAD" ]; then
-      sl_git_op="CHERRY-PICK"
+      sl_git_op="CHERRY-PICKING"
     fi
   fi
 
