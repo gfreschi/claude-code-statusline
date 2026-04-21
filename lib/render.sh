@@ -212,8 +212,10 @@ emit_segment() {
       sl_row="${sl_row}${_es_bg_esc}${_es_fg_esc}${_es_content}"
     fi
   elif [ "$sl_prev_bg" = "$_es_bg" ]; then
-    # Same BG: just change FG (no separator)
-    sl_row="${sl_row}${_es_fg_esc}${_es_content}"
+    # Same BG: no powerline transition, but reset any stray attrs from the
+    # prior segment (bold/blink left over if the attr_end SGR on the
+    # previous segment underflowed) and reapply BG+FG before the content.
+    sl_row="${sl_row}${SL_RST}${_es_bg_esc}${_es_fg_esc}${_es_content}"
   else
     # Different BG: powerline arrow transition
     sl_row="${sl_row}${SL_RST}\033[38;5;${sl_prev_bg}m${_es_bg_esc}${GL_POWERLINE}${_es_fg_esc}${_es_content}"
@@ -276,7 +278,9 @@ emit_on_muted() {
   _eom_content="$2"
   if [ "$sl_prev_bg" = "$C_MUTED_BG" ]; then
     emit_thin_sep
-    sl_row="${sl_row}\033[38;5;${_eom_fg}m${_eom_content}"
+    # Full reset + re-apply BG/FG before the content so bold/blink from a
+    # prior same-BG segment does not linger into this one.
+    sl_row="${sl_row}${SL_RST}\033[48;5;${C_MUTED_BG}m\033[38;5;${_eom_fg}m${_eom_content}"
   else
     emit_segment "$C_MUTED_BG" "$_eom_fg" "$_eom_content"
   fi
@@ -289,10 +293,10 @@ emit_recessed() {
   _er_content="$2"
   if [ "$sl_prev_bg" = "$C_DIM_BG" ]; then
     emit_thin_sep
-    sl_row="${sl_row}\033[38;5;${_er_fg}m${_er_content}"
+    sl_row="${sl_row}${SL_RST}\033[48;5;${C_DIM_BG}m\033[38;5;${_er_fg}m${_er_content}"
   else
     emit_thin_sep
-    sl_row="${sl_row}\033[48;5;${C_DIM_BG}m\033[38;5;${_er_fg}m${_er_content}"
+    sl_row="${sl_row}${SL_RST}\033[48;5;${C_DIM_BG}m\033[38;5;${_er_fg}m${_er_content}"
     sl_prev_bg="$C_DIM_BG"
   fi
 }
