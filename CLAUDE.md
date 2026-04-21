@@ -137,6 +137,7 @@ Themes define 12 `PALETTE_*` variables. `derive.sh` maps them to ~30 `C_*` seman
 | `sl_added_dirs_count` | integer >= 0 | `length` of `.workspace.added_dirs` |
 | `sl_api_duration_ms` | integer or empty | `.cost.total_api_duration_ms` |
 | `sl_project_dir` | string or empty | `.workspace.project_dir` (falls back to `.cwd`) |
+| `sl_project` | string or empty | basename of `sl_project_dir` (falls back to basename of `sl_cwd`). v2.0.1 moved this off the cwd basename so the project pill names the project root, not the current subdirectory. |
 | `_sl_layout` | `classic` or `zen` | validated env var `CLAUDE_STATUSLINE_LAYOUT` |
 
 **Glyph families added in v2** (set by `detect_capabilities` in `render.sh`):
@@ -191,6 +192,9 @@ Set by `cache.sh` via `cache_refresh`. Available to segments:
 - **Cache file security:** String values written to cache files must use single-quote escaping to prevent shell injection when the cache is sourced. Numeric values use `printf '%d'` which sanitizes to digits.
 - **Control-character sanitization** happens at the `jq` extraction boundary in `main.sh` (via `gsub("[[:cntrl:]]"; "")` on string fields) and in `cache.sh` before writing git-sourced strings to the cache file. Segments can trust that `sl_*` variables are free of ESC / BEL / other C0 bytes, so rendered output cannot be spoofed by an attacker who controls a git branch name, repo path, or session name.
 - **Side-effect-having work runs once per render, not per row group.** The render orchestrator iterates segments three times in zen (one pass per row group). Segments with side effects — e.g. `sparkline_push` — must live in `main.sh` (called once after `cache_refresh`) rather than inside a segment function, otherwise they execute N× per render and corrupt any ring-buffer they maintain.
+- **Glyph escapes use `\0NNN` octal, not `\xNN` hex.** Dash's `printf %b` and zsh's builtin `printf %b` do not honor `\xNN`. Every glyph byte sequence in `lib/render.sh` is declared as `\0NNN` (leading zero required so zsh parses it as octal).
+- **`\033` vs `\0033` — format string vs `%b` argument.** Strings stored in `sl_row` and later emitted via `printf '%b\n'` in `main.sh` use `\0033[` (the leading zero matters for zsh). But anything passed directly to a `printf 'format'` call (e.g. OSC 8 link wrapping in `render_row`) must use `\033]` — format-string `\NNN` parsing is greedy over 1-3 octal digits, so `\0033]` would parse as `\003` + `3]` and emit ETX + garbage.
+- **Truncate long labels via `sl_truncate`.** `render.sh` exposes `sl_truncate _out_var "$text" max_len` which cuts to `(max_len - 1)` bytes + `$GL_ELLIPSIS`. Used by project/git/worktree/agent/micro-location. Note: byte-indexed (may cut mid-codepoint on UTF-8 labels — acceptable for user-supplied branch / directory names).
 
 ## Testing
 
@@ -211,8 +215,24 @@ sh test/run.sh --check
 # CI: test under a specific shell:
 sh test/run.sh --check --shell dash
 
+# Regenerate snapshot golden files after an intentional visual change:
+sh test/run.sh --update-snapshots
+# Snapshots live at test/snapshots/<scenario>_<tier>.txt (ANSI-stripped)
+# plus 3 ASCII-fallback variants (<scenario>_full-ascii.txt) and 1 OSC 8
+# assertion that renders against the real project repo.
+
+# Benchmark (10-run average of zen-full, fails if over threshold):
+sh test/run.sh --bench
+
 # Syntax check all files:
 find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 -I{} sh -c 'sh -n "$1" || echo "FAIL: $1"' _ {}
+
+# Deterministic time for tests / GIF regens. test/run.sh and every
+# images/render-*.sh export CLAUDE_STATUSLINE_NOW_OVERRIDE=1800000000
+# (the TEST_NOW baseline). Fixtures carry resets_at as TEST_NOW + offset
+# (e.g. warming 5h reset -> 1800006300) so time-remaining text is stable
+# across runs. When authoring a new rate_limits fixture, use the same
+# baseline.
 
 # Check for bashisms:
 grep -rn '\[\[' --include='*.sh' .
@@ -257,6 +277,7 @@ CLAUDE_STATUSLINE_THEME=dracula SL_DIR=. SL_LIB=./lib sh -c '. ./lib/theme.sh
 6. Add `segment_my_segment` to `SL_SEGMENTS` in `main.sh` at the desired position
 7. Run `sh -n lib/segments/my-segment.sh` to verify syntax
 8. Run `sh test/run.sh --scenario full` to verify rendering
+9. If the segment displays a user-supplied label (branch, project, agent name): cap it with `sl_truncate _var "$raw" N`. See `lib/segments/project.sh` or `agent.sh` for examples. Full tier leaves labels unabbreviated; compact/micro tiers truncate.
 
 ## Adding a New Theme
 
