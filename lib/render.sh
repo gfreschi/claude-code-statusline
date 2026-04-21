@@ -291,6 +291,14 @@ emit_on_muted() {
 emit_recessed() {
   _er_fg="$1"
   _er_content="$2"
+  # First emitter on the row: delegate to emit_segment so the capsule
+  # left-cap glyph gets rendered (when CAP_STYLE=capsule). Otherwise the
+  # row would open with no left cap on rows that happen to start with a
+  # recessed segment.
+  if [ -z "$sl_prev_bg" ]; then
+    emit_segment "$C_DIM_BG" "$_er_fg" "$_er_content"
+    return
+  fi
   if [ "$sl_prev_bg" = "$C_DIM_BG" ]; then
     emit_thin_sep
     sl_row="${sl_row}${SL_RST}\033[48;5;${C_DIM_BG}m\033[38;5;${_er_fg}m${_er_content}"
