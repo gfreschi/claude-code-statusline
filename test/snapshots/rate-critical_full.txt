@@ -1,0 +1,2 @@
+  Opus    CTX! ●●●●○ 96% 192k/200k   92% used · 24m reset   2.6k tok/min │  cache 61% 
+  app │  ↗ +142 / -38 │  1h12m (api 14m) 
