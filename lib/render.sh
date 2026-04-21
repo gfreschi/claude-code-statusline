@@ -68,7 +68,7 @@ detect_capabilities() {
     GL_BATT_FULL='\xef\x89\x80'        # U+F240 nf-fa-battery_full
     GL_BATT_MID='\xef\x89\x82'         # U+F242 nf-fa-battery_half
     GL_BATT_LOW='\xef\x89\x84'         # U+F244 nf-fa-battery_quarter
-    GL_FORK='\xee\x9c\xa5'             # U+E725 reuse git branch glyph as minimal fork marker
+    GL_FORK='\xef\x90\x82'             # U+F402 nf-oct-repo_forked
     GL_CAP_LEFT='\xee\x82\xb6'         # U+E0B6 powerline round left
     GL_CAP_RIGHT='\xee\x82\xb4'        # U+E0B4 powerline round right
     GL_UP='\xe2\x86\x91'               # U+2191
