@@ -17,7 +17,8 @@ segment_agent() {
   # Use model's own FG for readable contrast on colored BG
   _seg_fg=$sl_model_fg
 
-  _seg_content="$sl_agent_name"
+  sl_truncate _ag_label "$sl_agent_name" 20
+  _seg_content="$_ag_label"
 
   return 0
 }

@@ -24,6 +24,27 @@ to_int() {
   esac
 }
 
+# --- sl_truncate(varname, text, max_len) ---
+# If `text` is longer than max_len chars, writes `prefix + GL_ELLIPSIS` to
+# varname, where prefix is the first max_len-1 characters. Otherwise writes
+# text unchanged.
+#
+# Note: ${#STRING} counts bytes, not display columns, under POSIX sh. We
+# only call this on Latin-1-clean inputs (branch names, agent names,
+# project paths) so byte count and column count agree. GL_ELLIPSIS is
+# counted as one column even in ASCII fallback (`..`, 2 chars); the tiny
+# overflow in non-unicode terminals is acceptable.
+sl_truncate() {
+  _tr_var="$1"
+  _tr_text="$2"
+  _tr_max="$3"
+  if [ "${#_tr_text}" -gt "$_tr_max" ]; then
+    _tr_cut=$(( _tr_max - 1 ))
+    _tr_text="$(printf '%.'"${_tr_cut}"'s' "$_tr_text")${GL_ELLIPSIS}"
+  fi
+  eval "$_tr_var=\$_tr_text"
+}
+
 # --- Capability detection ---
 # Sets: SL_CAP_NERD, SL_CAP_UNICODE, SL_CAP_OSC8
 # Also sets glyph variables based on capabilities

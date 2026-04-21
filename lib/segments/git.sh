@@ -43,7 +43,14 @@ segment_git() {
     _seg_link_url="${sl_github_base_url}/tree/${sl_branch}"
   fi
 
-  _seg_content="$sl_branch"
+  # Truncate long branch names in compact tier. Full/zen stay unabbreviated
+  # so reviewers can verify the exact branch they are on.
+  if [ "$_sl_tier" = "compact" ]; then
+    sl_truncate _gi_label "$sl_branch" 24
+    _seg_content="$_gi_label"
+  else
+    _seg_content="$sl_branch"
+  fi
 
   case "$_sl_tier" in
     full|*)
