@@ -365,6 +365,11 @@ render_row() {
     # Call segment function -- skip if returns non-zero
     "$_seg_fn" || continue
 
+    # Defensive default: a segment that forgets to set _seg_weight would
+    # otherwise fall through the weight case below and be silently dropped.
+    # Tertiary is the least-committal non-primary choice.
+    [ -z "$_seg_weight" ] && _seg_weight="tertiary"
+
     # Tier gate. Hierarchy: zen > full > compact > micro. A segment declares
     # the minimum tier it renders in; higher tiers inherit.
     case "$_seg_min_tier" in
@@ -403,14 +408,17 @@ render_row() {
       _seg_content=$(printf '\033]8;;%s\a%s\033]8;;\a' "$_seg_link_url" "$_seg_content")
     fi
 
-    # Attribute handling (bold, blink)
+    # Attribute handling (bold, blink). Tokenize on both comma and
+    # whitespace so `"bold,blink"` (common typo) matches the same tokens
+    # as `"bold blink"`.
     _rr_attr_start=""
     _rr_attr_end=""
     if [ -n "$_seg_attrs" ]; then
-      case " $_seg_attrs " in
+      _rr_attrs_norm=$(printf '%s' "$_seg_attrs" | tr ',' ' ')
+      case " $_rr_attrs_norm " in
         *" bold "*) _rr_attr_start="${_rr_attr_start}${SL_BOLD}" ;;
       esac
-      case " $_seg_attrs " in
+      case " $_rr_attrs_norm " in
         *" blink "*) _rr_attr_start="${_rr_attr_start}${SL_BLINK}" ;;
       esac
     fi
