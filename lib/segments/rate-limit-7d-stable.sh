@@ -30,7 +30,7 @@ segment_rate_limit_7d_stable() {
   _seg_group_fallback=""   # does not render in classic
   _seg_icon=""
   _seg_attrs=""
-  _seg_content="7d ${_r7_pct}% . ${_r7_days}d"
+  _seg_content="7d ${_r7_pct}% ${GL_SEP} ${_r7_days}d"
 
   # Minimalist override: drop word label
   if [ "${CLAUDE_STATUSLINE_MINIMAL:-0}" = "1" ]; then

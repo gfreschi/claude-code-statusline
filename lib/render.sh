@@ -105,6 +105,8 @@ detect_capabilities() {
     GL_ARROW_UP='↗'
     GL_ARROW_DOWN='↘'
     GL_ARROW_FLAT='→'
+    GL_SEP='·'                         # U+00B7 middle dot (ornamental)
+    GL_ELLIPSIS='…'                    # U+2026 horizontal ellipsis
     GL_BLK_FILLED='\xe2\x96\x93'       # U+2593
     GL_BLK_EMPTY='\xe2\x96\x91'        # U+2591
     GL_PIP_FILLED='\xc2\xb7'           # U+00B7 middle dot
@@ -124,6 +126,8 @@ detect_capabilities() {
     GL_ARROW_UP='+'
     GL_ARROW_DOWN='-'
     GL_ARROW_FLAT='='
+    GL_SEP='.'                         # ASCII fallback
+    GL_ELLIPSIS='..'                   # ASCII fallback
     GL_BLK_FILLED='#'
     GL_BLK_EMPTY='.'
     GL_PIP_FILLED='*'

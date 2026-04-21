@@ -83,27 +83,27 @@ segment_rate_limit() {
             _rl_burn_label=" burns in ${_rl_burn_min}m ${GL_UP}"
           fi
         fi
-        _seg_content="${_rl_glyph}${_rl_burn_label} ${_rl_5h}% left . ${_rl_time} reset"
+        _seg_content="${_rl_glyph}${_rl_burn_label} ${_rl_5h}% left ${GL_SEP} ${_rl_time} reset"
       elif [ "$_rl_state" = "warm" ]; then
         _rl_7d_inline=""
         to_int _rl_7d "$sl_rate_7d_pct" -1
         if [ "$_sl_layout" != "zen" ] && [ "$_rl_7d" -ge 50 ]; then
-          _rl_7d_inline=" . 7d ${_rl_7d}%"
+          _rl_7d_inline=" ${GL_SEP} 7d ${_rl_7d}%"
         fi
-        _seg_content="${_rl_glyph} ${_rl_time} left . ${_rl_5h}%${_rl_7d_inline}"
+        _seg_content="${_rl_glyph} ${_rl_time} left ${GL_SEP} ${_rl_5h}%${_rl_7d_inline}"
       else
-        _seg_content="${_rl_glyph} ${_rl_time} left . ${_rl_left}%"
+        _seg_content="${_rl_glyph} ${_rl_time} left ${GL_SEP} ${_rl_left}%"
       fi
       ;;
     minimal)
-      _seg_content="${_rl_time} . ${_rl_5h}%"
+      _seg_content="${_rl_time} ${GL_SEP} ${_rl_5h}%"
       ;;
     pill)
       to_int _rl_7d "$sl_rate_7d_pct" -1
       if [ "$_rl_7d" -ge 0 ]; then
-        _seg_content="5h ${_rl_5h}% . ${_rl_time} | 7d ${_rl_7d}%"
+        _seg_content="5h ${_rl_5h}% ${GL_SEP} ${_rl_time} | 7d ${_rl_7d}%"
       else
-        _seg_content="5h ${_rl_5h}% . ${_rl_time}"
+        _seg_content="5h ${_rl_5h}% ${GL_SEP} ${_rl_time}"
       fi
       ;;
     bar)
@@ -113,13 +113,13 @@ segment_rate_limit() {
       _rl_bar=""
       _rl_bi=0; while [ "$_rl_bi" -lt "$_rl_bar_filled" ]; do _rl_bar="${_rl_bar}${GL_BLK_FILLED}"; _rl_bi=$((_rl_bi+1)); done
       _rl_bi=0; while [ "$_rl_bi" -lt $(( 10 - _rl_bar_filled )) ]; do _rl_bar="${_rl_bar}${GL_BLK_EMPTY}"; _rl_bi=$((_rl_bi+1)); done
-      _seg_content="5h ${_rl_bar} ${_rl_5h}% . ${_rl_time}"
+      _seg_content="5h ${_rl_bar} ${_rl_5h}% ${GL_SEP} ${_rl_time}"
       ;;
   esac
 
   # Compact tier: drop 7d inline
   if [ "$_sl_tier" = "compact" ]; then
-    _seg_content="${_rl_glyph:-} ${_rl_time} . ${_rl_5h}%"
+    _seg_content="${_rl_glyph:-} ${_rl_time} ${GL_SEP} ${_rl_5h}%"
   fi
   # Micro tier
   if [ "$_sl_tier" = "micro" ]; then

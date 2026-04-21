@@ -7,7 +7,7 @@ segment_info_slot() {
 
   # 1. Output style (non-default)
   if [ -n "$sl_output_style" ] && [ "$sl_output_style" != "default" ]; then
-    _seg_content=". ${sl_output_style}"
+    _seg_content="${GL_SEP} ${sl_output_style}"
     _seg_icon=""
     _is_hit=1
   fi
