@@ -430,10 +430,14 @@ render_row() {
       _rr_attr_end="${SL_RST}\033[48;5;${_rr_ebg}m\033[38;5;${_rr_efg}m"
     fi
 
-    # Build detail suffix (dim inline text for secondary info like ahead/behind)
+    # Build detail suffix (dim inline text for secondary info like ahead/behind).
+    # Close the detail with a full SL_RST + BG + FG so the surrounding attr
+    # state is cleanly restored: SL_UNDIM alone (\033[22m) only resets
+    # intensity, which some terminals interpret strictly and leave stale
+    # color state leaking into powerline transitions.
     _rr_detail=""
     if [ -n "$_seg_detail" ]; then
-      _rr_detail=" ${SL_DIM}\033[38;5;${C_DIM}m${_seg_detail}${SL_UNDIM}\033[38;5;${_rr_efg}m"
+      _rr_detail=" ${SL_DIM}\033[38;5;${C_DIM}m${_seg_detail}${SL_RST}\033[48;5;${_rr_ebg}m\033[38;5;${_rr_efg}m"
     fi
 
     # Build padded content
