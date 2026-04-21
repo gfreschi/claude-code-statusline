@@ -320,9 +320,12 @@ ctx_gauge_render() {
       _cg_result="${_cg_result% }"
       ;;
     braille)
-      # Map pct into 9 buckets (BRL_0..BRL_8) stretched across 3 cells
-      _cg_n=$(( _cg_pct * 9 / 100 ))
+      # Map pct into 9 buckets (BRL_0..BRL_8) stretched across 3 cells.
+      # Rounded division so pct=95 maps to bucket 8 (full) instead of
+      # saturating at pct>=89 as the truncating 9/100 mapping did.
+      _cg_n=$(( (_cg_pct * 8 + 50) / 100 ))
       [ "$_cg_n" -gt 8 ] && _cg_n=8
+      [ "$_cg_n" -lt 0 ] && _cg_n=0
       eval "_cg_result=\$GL_BRL_${_cg_n}\$GL_BRL_${_cg_n}\$GL_BRL_${_cg_n}"
       ;;
     dots|*)

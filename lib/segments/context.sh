@@ -85,6 +85,10 @@ segment_context() {
             _cx_compact=" compact ~${_cx_hrs}h"
           elif [ "$_cx_min_to_compact" -gt 0 ]; then
             _cx_compact=" compact ~${_cx_min_to_compact}min"
+          else
+            # Sub-minute projections (common early in a session at the
+            # 60s threshold): don't round to 0min and disappear.
+            _cx_compact=" compact <1min"
           fi
         fi
       fi
