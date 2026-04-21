@@ -37,7 +37,7 @@ segment_rate_limit() {
     _rl_time="??"
   fi
 
-  # State thresholds
+  # State thresholds (based on USED %)
   if [ "$_rl_5h" -ge 85 ]; then
     _rl_state="crit"
   elif [ "$_rl_5h" -ge 50 ]; then
@@ -57,76 +57,90 @@ segment_rate_limit() {
   _rl_style="${CLAUDE_STATUSLINE_RATE_STYLE:-ember}"
   case "$_rl_style" in ember|bar|pill|minimal) ;; *) _rl_style=ember ;; esac
 
-  # Preset rendering
+  # Ember glyph tracks state (empty for non-ember presets)
+  if [ "$_rl_style" = "ember" ]; then
+    case "$_rl_state" in
+      ok)   _rl_glyph="$GL_BATT_FULL" ;;
+      warm) _rl_glyph="$GL_BATT_MID" ;;
+      crit) _rl_glyph="$GL_BATT_LOW" ;;
+    esac
+  fi
+
+  # Leading glyph + space when set. Empty when preset has no glyph, so the
+  # compact/micro override below doesn't produce a stray leading space.
+  _rl_prefix=""
+  [ -n "$_rl_glyph" ] && _rl_prefix="${_rl_glyph} "
+
+  # Burn-in projection for crit when reset info is known. Only ember shows
+  # the glyph, but any preset benefits from the projection on the crit row.
+  _rl_burn_label=""
+  if [ "$_rl_state" = "crit" ] && [ "$_rl_reset" -gt 0 ] && [ "$_rl_5h" -gt 0 ]; then
+    _rl_elapsed=$(( 18000 - _rl_secs ))
+    [ "$_rl_elapsed" -lt 1 ] && _rl_elapsed=1
+    _rl_elapsed_pct=$(( _rl_elapsed * 100 / 18000 ))
+    if [ "$_rl_5h" -gt "$_rl_elapsed_pct" ] && [ "$_rl_elapsed_pct" -gt 0 ]; then
+      _rl_burn_sec=$(( _rl_elapsed * 100 / _rl_5h - _rl_elapsed ))
+      [ "$_rl_burn_sec" -lt 0 ] && _rl_burn_sec=0
+      _rl_burn_min=$(( _rl_burn_sec / 60 ))
+      _rl_burn_label=" (burns in ${_rl_burn_min}m ${GL_UP})"
+    fi
+  fi
+
+  # Preset rendering. USED% + "used" label is consistent across every preset
+  # and state so readers never have to disambiguate whether the number means
+  # budget used or budget remaining.
   case "$_rl_style" in
     ember)
-      case "$_rl_state" in
-        ok)   _rl_glyph="$GL_BATT_FULL" ;;
-        warm) _rl_glyph="$GL_BATT_MID" ;;
-        crit) _rl_glyph="$GL_BATT_LOW" ;;
-      esac
-      _rl_left=$(( 100 - _rl_5h ))
       if [ "$_rl_state" = "crit" ]; then
-        # ETA for "burns in Xm" when pace > 1.0
-        # Simple model: if used > elapsed percent, show burn ETA.
-        _rl_burn_label=""
-        if [ "$_rl_reset" -gt 0 ] && [ "$_rl_5h" -gt 0 ]; then
-          # elapsed_sec = 18000 - remaining_sec; elapsed_pct = elapsed_sec*100/18000
-          _rl_elapsed=$(( 18000 - _rl_secs ))
-          [ "$_rl_elapsed" -lt 1 ] && _rl_elapsed=1
-          _rl_elapsed_pct=$(( _rl_elapsed * 100 / 18000 ))
-          if [ "$_rl_5h" -gt "$_rl_elapsed_pct" ] && [ "$_rl_elapsed_pct" -gt 0 ]; then
-            # projected seconds to 100 at current rate: 18000 * 100 / _rl_5h * (elapsed/18000)
-            _rl_burn_sec=$(( _rl_elapsed * 100 / _rl_5h - _rl_elapsed ))
-            [ "$_rl_burn_sec" -lt 0 ] && _rl_burn_sec=0
-            _rl_burn_min=$(( _rl_burn_sec / 60 ))
-            _rl_burn_label=" burns in ${_rl_burn_min}m ${GL_UP}"
-          fi
-        fi
-        _seg_content="${_rl_glyph}${_rl_burn_label} ${_rl_5h}% left . ${_rl_time} reset"
-      elif [ "$_rl_state" = "warm" ]; then
-        _rl_7d_inline=""
-        to_int _rl_7d "$sl_rate_7d_pct" -1
-        if [ "$_sl_layout" != "zen" ] && [ "$_rl_7d" -ge 50 ]; then
-          _rl_7d_inline=" . 7d ${_rl_7d}%"
-        fi
-        _seg_content="${_rl_glyph} ${_rl_time} left . ${_rl_5h}%${_rl_7d_inline}"
+        _seg_content="${_rl_prefix}${_rl_5h}% used ${GL_SEP} ${_rl_time} reset${_rl_burn_label}"
       else
-        _seg_content="${_rl_glyph} ${_rl_time} left . ${_rl_left}%"
+        _seg_content="${_rl_prefix}${_rl_5h}% used ${GL_SEP} ${_rl_time} left"
       fi
       ;;
     minimal)
-      _seg_content="${_rl_time} . ${_rl_5h}%"
+      _seg_content="${_rl_5h}% used ${GL_SEP} ${_rl_time}"
       ;;
     pill)
       to_int _rl_7d "$sl_rate_7d_pct" -1
       if [ "$_rl_7d" -ge 0 ]; then
-        _seg_content="5h ${_rl_5h}% . ${_rl_time} | 7d ${_rl_7d}%"
+        _seg_content="5h ${_rl_5h}% used ${GL_SEP} ${_rl_time} | 7d ${_rl_7d}% used"
       else
-        _seg_content="5h ${_rl_5h}% . ${_rl_time}"
+        _seg_content="5h ${_rl_5h}% used ${GL_SEP} ${_rl_time}"
       fi
       ;;
     bar)
-      # position = elapsed%, fill = _rl_5h
       _rl_bar_filled=$(( _rl_5h / 10 ))
       [ "$_rl_bar_filled" -gt 10 ] && _rl_bar_filled=10
       _rl_bar=""
       _rl_bi=0; while [ "$_rl_bi" -lt "$_rl_bar_filled" ]; do _rl_bar="${_rl_bar}${GL_BLK_FILLED}"; _rl_bi=$((_rl_bi+1)); done
       _rl_bi=0; while [ "$_rl_bi" -lt $(( 10 - _rl_bar_filled )) ]; do _rl_bar="${_rl_bar}${GL_BLK_EMPTY}"; _rl_bi=$((_rl_bi+1)); done
-      _seg_content="5h ${_rl_bar} ${_rl_5h}% . ${_rl_time}"
+      _seg_content="5h ${_rl_bar} ${_rl_5h}% used ${GL_SEP} ${_rl_time}"
       ;;
   esac
 
-  # Compact tier: drop 7d inline
+  # Note: classic layouts get the 7d signal from the dedicated
+  # segment_rate_limit_7d_stable (session row, tertiary). Zen gets it on
+  # Row 3 (ambient). No inline 7d fragment here.
+
+  # Compact tier: drop the "left"/"reset" suffix words for space, but keep
+  # the burn-in projection on ember+crit - that is the most actionable
+  # signal right before the user gets rate-limited.
   if [ "$_sl_tier" = "compact" ]; then
-    _seg_content="${_rl_glyph:-} ${_rl_time} . ${_rl_5h}%"
-  fi
-  # Micro tier
-  if [ "$_sl_tier" = "micro" ]; then
-    _seg_content="${_rl_glyph:-} ${_rl_time}"
+    if [ "$_rl_style" = "ember" ] && [ "$_rl_state" = "crit" ]; then
+      _seg_content="${_rl_prefix}${_rl_5h}% used${_rl_burn_label}"
+    else
+      _seg_content="${_rl_prefix}${_rl_5h}% used ${GL_SEP} ${_rl_time}"
+    fi
   fi
 
-  # Minimalist override: strip word labels, keep value + time
+  # Micro tier: time dominates, percent is the tiebreaker in the segment
+  # next to it. Drop the label to stay under 10 cols.
+  if [ "$_sl_tier" = "micro" ]; then
+    _seg_content="${_rl_prefix}${_rl_time}"
+  fi
+
+  # CLAUDE_STATUSLINE_MINIMAL=1 env var strips labels entirely (separate
+  # concept from the `minimal` preset above).
   if [ "${CLAUDE_STATUSLINE_MINIMAL:-0}" = "1" ]; then
     _seg_content="${_rl_time} ${_rl_5h}%"
   fi

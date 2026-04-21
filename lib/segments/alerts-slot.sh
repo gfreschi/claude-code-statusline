@@ -32,8 +32,10 @@ segment_alerts_slot() {
     fi
   fi
 
-  # 3. 7d warning (zen-only)
-  if [ "$_as_hit" -eq 0 ] && [ "$_sl_layout" = "zen" ]; then
+  # 3. 7d warning: fires in both layouts. In classic this is the only
+  # 7d signal when >=70% (rate_limit_7d_stable self-gates below 70%),
+  # so gating the alert to zen would leave classic blind to crit 7d.
+  if [ "$_as_hit" -eq 0 ]; then
     to_int _as_7d "$sl_rate_7d_pct" -1
     if [ "$_as_7d" -ge 70 ]; then
       _seg_icon="$GL_WARN"

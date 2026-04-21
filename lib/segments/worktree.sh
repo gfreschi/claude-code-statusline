@@ -13,11 +13,7 @@ segment_worktree() {
   _seg_bg=""
   _seg_fg=$C_WORKTREE_FG
 
-  _wt_label="$sl_worktree_name"
-  if [ ${#_wt_label} -gt 20 ]; then
-    _wt_label="$(printf '%.18s' "$_wt_label").."
-  fi
-
+  sl_truncate _wt_label "$sl_worktree_name" 20
   _seg_content="wt:${_wt_label}"
 
   return 0

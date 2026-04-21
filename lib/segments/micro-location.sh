@@ -14,17 +14,8 @@ segment_micro_location() {
   _seg_bg=$C_MUTED_BG
   _seg_fg=$C_BASE_FG
 
-  # Truncate project to ~8 chars
-  _ml_proj="$sl_project"
-  if [ ${#_ml_proj} -gt 8 ]; then
-    _ml_proj="$(printf '%.6s' "$_ml_proj").."
-  fi
-
-  # Truncate branch to ~12 chars
-  _ml_branch="${sl_branch:-}"
-  if [ ${#_ml_branch} -gt 12 ]; then
-    _ml_branch="$(printf '%.10s' "$_ml_branch").."
-  fi
+  sl_truncate _ml_proj "$sl_project" 8
+  sl_truncate _ml_branch "${sl_branch:-}" 12
 
   if [ -n "$_ml_proj" ] && [ -n "$_ml_branch" ]; then
     _seg_content="${_ml_proj} ${GL_THIN_SEP} ${_ml_branch}"

@@ -44,7 +44,10 @@ segment_burn_rate() {
         IFS=','
         for _br_v in $_br_history; do
           case "$_br_v" in ''|*[!0-9]*) _br_v=0 ;; esac
-          _br_bucket=$(( _br_v * 8 / _br_max ))
+          # Rounded division matches ctx_gauge_render's braille bucketing:
+          # values at the high end of the range map to BRL_8 only when
+          # they are actually close to _br_max, not at 89% of it.
+          _br_bucket=$(( (_br_v * 8 + _br_max / 2) / _br_max ))
           [ "$_br_bucket" -gt 8 ] && _br_bucket=8
           [ "$_br_bucket" -lt 0 ] && _br_bucket=0
           eval "_br_spark=\"\${_br_spark}\$GL_BRL_${_br_bucket}\""

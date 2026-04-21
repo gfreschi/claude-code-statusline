@@ -201,8 +201,8 @@ The rotation keeps width budget low -- at most one extra pill per row, regardles
 
 Current priorities (canonical):
 
-- **`alerts_slot`** (Row 1, session): cache hit ratio < 70% -> added-dirs count > 0 -> (zen only) 7d rate >= 70%.
-- **`info_slot`** (Row 3 ambient with workspace fallback): non-default output style -> cwd drift below `project_dir` -> `session_name` set -> clock fallback.
+- **`alerts_slot`** (Row 1, session): cache hit ratio < 70% -> added-dirs count > 0 -> 7d rate >= 70% (both layouts since v2.0.1).
+- **`info_slot`** (Row 3 ambient with session fallback in classic): non-default output style -> cwd drift below `project_dir` -> `session_name` set -> clock fallback (zen only).
 
 When authoring a new slot, document the full priority order in the file header and match the existing `_is_hit` pattern so the behaviour stays easy to audit.
 

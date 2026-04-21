@@ -43,7 +43,14 @@ segment_git() {
     _seg_link_url="${sl_github_base_url}/tree/${sl_branch}"
   fi
 
-  _seg_content="$sl_branch"
+  # Truncate long branch names in compact tier. Full/zen stay unabbreviated
+  # so reviewers can verify the exact branch they are on.
+  if [ "$_sl_tier" = "compact" ]; then
+    sl_truncate _gi_label "$sl_branch" 24
+    _seg_content="$_gi_label"
+  else
+    _seg_content="$sl_branch"
+  fi
 
   case "$_sl_tier" in
     full|*)
@@ -58,8 +65,8 @@ segment_git() {
       if [ -n "$sl_git_untracked" ] && [ "$sl_git_untracked" -gt 0 ] 2>/dev/null; then
         _gs_detail="${_gs_detail}?${sl_git_untracked} "
       fi
-      [ "$sl_ahead" -gt 0 ] 2>/dev/null && _gs_detail="${_gs_detail}^${sl_ahead} "
-      [ "$sl_behind" -gt 0 ] 2>/dev/null && _gs_detail="${_gs_detail}v${sl_behind} "
+      [ "$sl_ahead" -gt 0 ] 2>/dev/null && _gs_detail="${_gs_detail}${GL_UP}${sl_ahead} "
+      [ "$sl_behind" -gt 0 ] 2>/dev/null && _gs_detail="${_gs_detail}${GL_DOWN}${sl_behind} "
       [ "$sl_stash_count" -gt 0 ] 2>/dev/null && _gs_detail="${_gs_detail}*${sl_stash_count} "
       if [ "$sl_git_fork" = "1" ]; then
         _gs_detail="${_gs_detail}${GL_FORK} fork "

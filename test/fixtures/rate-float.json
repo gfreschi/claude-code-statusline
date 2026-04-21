@@ -3,7 +3,7 @@
   "model": {"id": "claude-opus-4-7", "display_name": "Claude Opus"},
   "context_window": {"used_percentage": 52.5, "context_window_size": 150000, "current_usage": {"input_tokens": 30000, "output_tokens": 10000, "cache_creation_input_tokens": 15000, "cache_read_input_tokens": 80000}, "total_input_tokens": 120000, "total_output_tokens": 40000},
   "cost": {"total_duration_ms": 2040000, "total_lines_added": 142, "total_lines_removed": 38, "total_api_duration_ms": 480000},
-  "rate_limits": {"five_hour": {"used_percentage": 52.5, "resets_at": 9999999999}, "seven_day": {"used_percentage": 52.5, "resets_at": 9999999999}},
+  "rate_limits": {"five_hour": {"used_percentage": 52.5, "resets_at": 1800007200}, "seven_day": {"used_percentage": 52.5, "resets_at": 1800259200}},
   "output_style": {"name": "Explanatory"},
   "session_name": "refactor-auth",
   "workspace": {"current_dir": "/Users/me/projects/app/src/auth", "project_dir": "/Users/me/projects/app", "added_dirs": ["/extra/dir1", "/extra/dir2"]}

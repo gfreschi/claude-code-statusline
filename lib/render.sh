@@ -18,10 +18,36 @@ to_int() {
   _ti_val="$2"
   # Floor floats by stripping the fractional tail.
   case "$_ti_val" in *.*) _ti_val="${_ti_val%%.*}" ;; esac
+  # Reject empty, non-numeric, bare "-", "-foo", and any embedded dash
+  # ("5-6", "1-2-3") so arithmetic never sees a malformed integer.
   case "$_ti_val" in
-    ''|*[!0-9-]*|-*[!0-9]*) eval "$1=\$3" ;;
+    ''|-|*[!0-9-]*|-*[!0-9]*|*-*-*|*[0-9]-*) eval "$1=\$3" ;;
     *) eval "$1=\$_ti_val" ;;
   esac
+}
+
+# --- sl_truncate(varname, text, max_len) ---
+# If `text` is longer than max_len bytes, writes `prefix + GL_ELLIPSIS` to
+# varname, where prefix is the first max_len-1 bytes. Otherwise writes
+# text unchanged.
+#
+# Caveats:
+#   - ${#STRING} counts bytes, not codepoints, under dash / POSIX sh.
+#     Multi-byte UTF-8 labels (e.g. a branch name with accents) can be
+#     cut mid-codepoint, leaving a replacement-char tail. The call sites
+#     all accept user-supplied labels, and a stray U+FFFD at the end is
+#     visually no worse than no-truncation overflow.
+#   - GL_ELLIPSIS is counted as one column even in ASCII fallback
+#     (`..`, 2 bytes); ASCII-fallback output may overrun max_len by 1.
+sl_truncate() {
+  _tr_var="$1"
+  _tr_text="$2"
+  _tr_max="$3"
+  if [ "${#_tr_text}" -gt "$_tr_max" ]; then
+    _tr_cut=$(( _tr_max - 1 ))
+    _tr_text="$(printf '%.'"${_tr_cut}"'s' "$_tr_text")${GL_ELLIPSIS}"
+  fi
+  eval "$_tr_var=\$_tr_text"
 }
 
 # --- Capability detection ---
@@ -51,28 +77,28 @@ detect_capabilities() {
   # --- Set glyphs based on capabilities ---
   if [ "$SL_CAP_NERD" -eq 1 ]; then
     # Nerd Font glyphs (UTF-8 byte sequences)
-    GL_POWERLINE='\xee\x82\xb0'        # U+E0B0
-    GL_MODEL='\xef\x83\xab'            # U+F0EB nf-fa-lightbulb_o
-    GL_CTX='\xef\x87\x80'              # U+F1C0 nf-fa-database
-    GL_BURN='\xef\x83\xa4'             # U+F0E4 nf-fa-tachometer
-    GL_CACHE='\xef\x80\x8a'            # U+F00A nf-fa-th
-    GL_FOLDER='\xef\x81\xbc'           # U+F07C nf-fa-folder_open
-    GL_BRANCH='\xee\x9c\xa5'           # U+E725 nf-dev-git_branch
-    GL_DIRTY='\xef\x81\xaa'            # U+F06A nf-fa-exclamation_circle
-    GL_DETACHED='\xef\x90\x97'         # U+F417 nf-oct-git_commit
-    GL_CODE='\xef\x84\xa1'             # U+F121 nf-fa-code
-    GL_WORKTREE='\xef\x83\xa8'         # U+F0E8 nf-fa-sitemap
-    GL_CLOCK='\xef\x80\x97'            # U+F017 nf-fa-clock_o
-    GL_WARN='\xef\x81\xb1'             # U+F071 nf-fa-warning
-    GL_THIN_SEP='\xe2\x94\x82'         # U+2502
-    GL_BATT_FULL='\xef\x89\x80'        # U+F240 nf-fa-battery_full
-    GL_BATT_MID='\xef\x89\x82'         # U+F242 nf-fa-battery_half
-    GL_BATT_LOW='\xef\x89\x84'         # U+F244 nf-fa-battery_quarter
-    GL_FORK='\xee\x9c\xa5'             # U+E725 reuse git branch glyph as minimal fork marker
-    GL_CAP_LEFT='\xee\x82\xb6'         # U+E0B6 powerline round left
-    GL_CAP_RIGHT='\xee\x82\xb4'        # U+E0B4 powerline round right
-    GL_UP='\xe2\x86\x91'               # U+2191
-    GL_DOWN='\xe2\x86\x93'             # U+2193
+    GL_POWERLINE='\0356\0202\0260'        # U+E0B0
+    GL_MODEL='\0357\0203\0253'            # U+F0EB nf-fa-lightbulb_o
+    GL_CTX='\0357\0207\0200'              # U+F1C0 nf-fa-database
+    GL_BURN='\0357\0203\0244'             # U+F0E4 nf-fa-tachometer
+    GL_CACHE='\0357\0200\0212'            # U+F00A nf-fa-th
+    GL_FOLDER='\0357\0201\0274'           # U+F07C nf-fa-folder_open
+    GL_BRANCH='\0356\0234\0245'           # U+E725 nf-dev-git_branch
+    GL_DIRTY='\0357\0201\0252'            # U+F06A nf-fa-exclamation_circle
+    GL_DETACHED='\0357\0220\0227'         # U+F417 nf-oct-git_commit
+    GL_CODE='\0357\0204\0241'             # U+F121 nf-fa-code
+    GL_WORKTREE='\0357\0203\0250'         # U+F0E8 nf-fa-sitemap
+    GL_CLOCK='\0357\0200\0227'            # U+F017 nf-fa-clock_o
+    GL_WARN='\0357\0201\0261'             # U+F071 nf-fa-warning
+    GL_THIN_SEP='\0342\0224\0202'         # U+2502
+    GL_BATT_FULL='\0357\0211\0200'        # U+F240 nf-fa-battery_full
+    GL_BATT_MID='\0357\0211\0202'         # U+F242 nf-fa-battery_half
+    GL_BATT_LOW='\0357\0211\0204'         # U+F244 nf-fa-battery_quarter
+    GL_FORK='\0357\0220\0202'             # U+F402 nf-oct-repo_forked
+    GL_CAP_LEFT='\0356\0202\0266'         # U+E0B6 powerline round left
+    GL_CAP_RIGHT='\0356\0202\0264'        # U+E0B4 powerline round right
+    GL_UP='\0342\0206\0221'               # U+2191
+    GL_DOWN='\0342\0206\0223'             # U+2193
   else
     GL_POWERLINE='>'
     GL_MODEL=''
@@ -105,25 +131,29 @@ detect_capabilities() {
     GL_ARROW_UP='↗'
     GL_ARROW_DOWN='↘'
     GL_ARROW_FLAT='→'
-    GL_BLK_FILLED='\xe2\x96\x93'       # U+2593
-    GL_BLK_EMPTY='\xe2\x96\x91'        # U+2591
-    GL_PIP_FILLED='\xc2\xb7'           # U+00B7 middle dot
+    GL_SEP='·'                         # U+00B7 middle dot (ornamental)
+    GL_ELLIPSIS='…'                    # U+2026 horizontal ellipsis
+    GL_BLK_FILLED='\0342\0226\0223'       # U+2593
+    GL_BLK_EMPTY='\0342\0226\0221'        # U+2591
+    GL_PIP_FILLED='\0302\0267'           # U+00B7 middle dot
     GL_PIP_EMPTY=' '
-    GL_BRL_0='\xe2\xa0\x80'            # U+2800
-    GL_BRL_1='\xe2\xa0\x81'            # U+2801
-    GL_BRL_2='\xe2\xa0\x83'            # U+2803
-    GL_BRL_3='\xe2\xa0\x87'            # U+2807
-    GL_BRL_4='\xe2\xa0\x8f'            # U+280F
-    GL_BRL_5='\xe2\xa0\x9f'            # U+281F
-    GL_BRL_6='\xe2\xa0\xbf'            # U+283F
-    GL_BRL_7='\xe2\xa1\xbf'            # U+287F
-    GL_BRL_8='\xe2\xa3\xbf'            # U+28FF
+    GL_BRL_0='\0342\0240\0200'            # U+2800
+    GL_BRL_1='\0342\0240\0201'            # U+2801
+    GL_BRL_2='\0342\0240\0203'            # U+2803
+    GL_BRL_3='\0342\0240\0207'            # U+2807
+    GL_BRL_4='\0342\0240\0217'            # U+280F
+    GL_BRL_5='\0342\0240\0237'            # U+281F
+    GL_BRL_6='\0342\0240\0277'            # U+283F
+    GL_BRL_7='\0342\0241\0277'            # U+287F
+    GL_BRL_8='\0342\0243\0277'            # U+28FF
   else
     GL_DOT_FILLED='*'
     GL_DOT_EMPTY='-'
     GL_ARROW_UP='+'
     GL_ARROW_DOWN='-'
     GL_ARROW_FLAT='='
+    GL_SEP='.'                         # ASCII fallback
+    GL_ELLIPSIS='..'                   # ASCII fallback
     GL_BLK_FILLED='#'
     GL_BLK_EMPTY='.'
     GL_PIP_FILLED='*'
@@ -175,23 +205,25 @@ emit_segment() {
   _es_fg="$2"
   _es_content="$3"
 
-  _es_bg_esc="\033[48;5;${_es_bg}m"
-  _es_fg_esc="\033[38;5;${_es_fg}m"
+  _es_bg_esc="\0033[48;5;${_es_bg}m"
+  _es_fg_esc="\0033[38;5;${_es_fg}m"
 
   if [ -z "$sl_prev_bg" ]; then
     # First segment on this row. Capsule style prepends a left-cap glyph
     # in the upcoming segment's BG color on the terminal's default BG.
     if [ "${SL_USE_CAPSULE:-0}" -eq 1 ]; then
-      sl_row="${sl_row}${SL_RST}\033[38;5;${_es_bg}m${GL_CAP_LEFT}${_es_bg_esc}${_es_fg_esc}${_es_content}"
+      sl_row="${sl_row}${SL_RST}\0033[38;5;${_es_bg}m${GL_CAP_LEFT}${_es_bg_esc}${_es_fg_esc}${_es_content}"
     else
       sl_row="${sl_row}${_es_bg_esc}${_es_fg_esc}${_es_content}"
     fi
   elif [ "$sl_prev_bg" = "$_es_bg" ]; then
-    # Same BG: just change FG (no separator)
-    sl_row="${sl_row}${_es_fg_esc}${_es_content}"
+    # Same BG: no powerline transition, but reset any stray attrs from the
+    # prior segment (bold/blink left over if the attr_end SGR on the
+    # previous segment underflowed) and reapply BG+FG before the content.
+    sl_row="${sl_row}${SL_RST}${_es_bg_esc}${_es_fg_esc}${_es_content}"
   else
     # Different BG: powerline arrow transition
-    sl_row="${sl_row}${SL_RST}\033[38;5;${sl_prev_bg}m${_es_bg_esc}${GL_POWERLINE}${_es_fg_esc}${_es_content}"
+    sl_row="${sl_row}${SL_RST}\0033[38;5;${sl_prev_bg}m${_es_bg_esc}${GL_POWERLINE}${_es_fg_esc}${_es_content}"
   fi
 
   sl_prev_bg="$_es_bg"
@@ -201,7 +233,7 @@ emit_segment() {
 # Outputs thin separator in dim FG on current BG
 emit_thin_sep() {
   if [ -n "$sl_prev_bg" ]; then
-    sl_row="${sl_row}\033[38;5;${C_DIM}m${GL_THIN_SEP}"
+    sl_row="${sl_row}\0033[38;5;${C_DIM}m${GL_THIN_SEP}"
   fi
 }
 
@@ -210,22 +242,10 @@ emit_thin_sep() {
 emit_end() {
   if [ -n "$sl_prev_bg" ]; then
     if [ "${SL_USE_CAPSULE:-0}" -eq 1 ]; then
-      sl_row="${sl_row}${SL_RST}\033[38;5;${sl_prev_bg}m${GL_CAP_RIGHT}${SL_RST}"
+      sl_row="${sl_row}${SL_RST}\0033[38;5;${sl_prev_bg}m${GL_CAP_RIGHT}${SL_RST}"
     else
-      sl_row="${sl_row}${SL_RST}\033[38;5;${sl_prev_bg}m${GL_POWERLINE}${SL_RST}"
+      sl_row="${sl_row}${SL_RST}\0033[38;5;${sl_prev_bg}m${GL_POWERLINE}${SL_RST}"
     fi
-  fi
-}
-
-# --- osc8_link(url, text) ---
-# Wraps text in OSC 8 hyperlink if supported, otherwise plain text
-osc8_link() {
-  _ol_url="$1"
-  _ol_text="$2"
-  if [ "$SL_CAP_OSC8" -eq 1 ] && [ -n "$_ol_url" ]; then
-    printf '\033]8;;%s\a%s\033]8;;\a' "$_ol_url" "$_ol_text"
-  else
-    printf '%s' "$_ol_text"
   fi
 }
 
@@ -251,7 +271,9 @@ emit_on_muted() {
   _eom_content="$2"
   if [ "$sl_prev_bg" = "$C_MUTED_BG" ]; then
     emit_thin_sep
-    sl_row="${sl_row}\033[38;5;${_eom_fg}m${_eom_content}"
+    # Full reset + re-apply BG/FG before the content so bold/blink from a
+    # prior same-BG segment does not linger into this one.
+    sl_row="${sl_row}${SL_RST}\0033[48;5;${C_MUTED_BG}m\0033[38;5;${_eom_fg}m${_eom_content}"
   else
     emit_segment "$C_MUTED_BG" "$_eom_fg" "$_eom_content"
   fi
@@ -262,12 +284,20 @@ emit_on_muted() {
 emit_recessed() {
   _er_fg="$1"
   _er_content="$2"
+  # First emitter on the row: delegate to emit_segment so the capsule
+  # left-cap glyph gets rendered (when CAP_STYLE=capsule). Otherwise the
+  # row would open with no left cap on rows that happen to start with a
+  # recessed segment.
+  if [ -z "$sl_prev_bg" ]; then
+    emit_segment "$C_DIM_BG" "$_er_fg" "$_er_content"
+    return
+  fi
   if [ "$sl_prev_bg" = "$C_DIM_BG" ]; then
     emit_thin_sep
-    sl_row="${sl_row}\033[38;5;${_er_fg}m${_er_content}"
+    sl_row="${sl_row}${SL_RST}\0033[48;5;${C_DIM_BG}m\0033[38;5;${_er_fg}m${_er_content}"
   else
     emit_thin_sep
-    sl_row="${sl_row}\033[48;5;${C_DIM_BG}m\033[38;5;${_er_fg}m${_er_content}"
+    sl_row="${sl_row}${SL_RST}\0033[48;5;${C_DIM_BG}m\0033[38;5;${_er_fg}m${_er_content}"
     sl_prev_bg="$C_DIM_BG"
   fi
 }
@@ -295,9 +325,12 @@ ctx_gauge_render() {
       _cg_result="${_cg_result% }"
       ;;
     braille)
-      # Map pct into 9 buckets (BRL_0..BRL_8) stretched across 3 cells
-      _cg_n=$(( _cg_pct * 9 / 100 ))
+      # Map pct into 9 buckets (BRL_0..BRL_8) stretched across 3 cells.
+      # Rounded division so pct=95 maps to bucket 8 (full) instead of
+      # saturating at pct>=89 as the truncating 9/100 mapping did.
+      _cg_n=$(( (_cg_pct * 8 + 50) / 100 ))
       [ "$_cg_n" -gt 8 ] && _cg_n=8
+      [ "$_cg_n" -lt 0 ] && _cg_n=0
       eval "_cg_result=\$GL_BRL_${_cg_n}\$GL_BRL_${_cg_n}\$GL_BRL_${_cg_n}"
       ;;
     dots|*)
@@ -324,6 +357,11 @@ render_row() {
 
     # Call segment function -- skip if returns non-zero
     "$_seg_fn" || continue
+
+    # Defensive default: a segment that forgets to set _seg_weight would
+    # otherwise fall through the weight case below and be silently dropped.
+    # Tertiary is the least-committal non-primary choice.
+    [ -z "$_seg_weight" ] && _seg_weight="tertiary"
 
     # Tier gate. Hierarchy: zen > full > compact > micro. A segment declares
     # the minimum tier it renders in; higher tiers inherit.
@@ -358,19 +396,23 @@ render_row() {
       _rr_icon="${_seg_icon} "
     fi
 
-    # OSC 8 link wrapping (orchestrator applies, not segments)
-    if [ "$SL_CAP_OSC8" -eq 1 ] && [ -n "$_seg_link_url" ]; then
-      _seg_content=$(printf '\033]8;;%s\a%s\033]8;;\a' "$_seg_link_url" "$_seg_content")
-    fi
+    # OSC 8 link wrapping is applied at the end of this block, around the
+    # fully-assembled _rr_text (SGR attrs included). Wrapping the link
+    # *inside* an active bold/blink SGR - which the earlier v2 layout did -
+    # caused some terminals to misinterpret the escape boundaries and fail
+    # to restore attribute state on link exit.
 
-    # Attribute handling (bold, blink)
+    # Attribute handling (bold, blink). Tokenize on both comma and
+    # whitespace so `"bold,blink"` (common typo) matches the same tokens
+    # as `"bold blink"`.
     _rr_attr_start=""
     _rr_attr_end=""
     if [ -n "$_seg_attrs" ]; then
-      case " $_seg_attrs " in
+      _rr_attrs_norm=$(printf '%s' "$_seg_attrs" | tr ',' ' ')
+      case " $_rr_attrs_norm " in
         *" bold "*) _rr_attr_start="${_rr_attr_start}${SL_BOLD}" ;;
       esac
-      case " $_seg_attrs " in
+      case " $_rr_attrs_norm " in
         *" blink "*) _rr_attr_start="${_rr_attr_start}${SL_BLINK}" ;;
       esac
     fi
@@ -395,17 +437,31 @@ render_row() {
 
     # Build attr end sequence if attrs were set
     if [ -n "$_rr_attr_start" ]; then
-      _rr_attr_end="${SL_RST}\033[48;5;${_rr_ebg}m\033[38;5;${_rr_efg}m"
+      _rr_attr_end="${SL_RST}\0033[48;5;${_rr_ebg}m\0033[38;5;${_rr_efg}m"
     fi
 
-    # Build detail suffix (dim inline text for secondary info like ahead/behind)
+    # Build detail suffix (dim inline text for secondary info like ahead/behind).
+    # Close the detail with a full SL_RST + BG + FG so the surrounding attr
+    # state is cleanly restored: SL_UNDIM alone (\0033[22m) only resets
+    # intensity, which some terminals interpret strictly and leave stale
+    # color state leaking into powerline transitions.
     _rr_detail=""
     if [ -n "$_seg_detail" ]; then
-      _rr_detail=" ${SL_DIM}\033[38;5;${C_DIM}m${_seg_detail}${SL_UNDIM}\033[38;5;${_rr_efg}m"
+      _rr_detail=" ${SL_DIM}\0033[38;5;${C_DIM}m${_seg_detail}${SL_RST}\0033[48;5;${_rr_ebg}m\0033[38;5;${_rr_efg}m"
     fi
 
     # Build padded content
     _rr_text=" ${_rr_attr_start}${_rr_icon}${_seg_content}${_rr_detail}${_rr_attr_end} "
+
+    # OSC 8 link wrap: the escape sequences bracket the entire padded text
+    # so any SGR attributes live inside the link rather than straddling it.
+    #
+    # `\033` (not `\0033`) in a printf FORMAT string: greedy 1-3 octal
+    # digits match 033 exactly = ESC. `\0033` would parse as `\003` + `3`
+    # and emit an ETX control byte instead.
+    if [ "$SL_CAP_OSC8" -eq 1 ] && [ -n "$_seg_link_url" ]; then
+      _rr_text=$(printf '\033]8;;%s\a%s\033]8;;\a' "$_seg_link_url" "$_rr_text")
+    fi
 
     # Emit based on weight
     case "$_seg_weight" in

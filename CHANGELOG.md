@@ -9,6 +9,115 @@ and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/
 
 _Nothing yet._
 
+## [2.0.1] - 2026-04-21
+
+Visual-cleanup patch. Fixes semantic and rendering issues shipped in 2.0,
+tightens the segment <-> orchestrator contract, and adds stripped-ANSI
+snapshot tests so these regressions cannot recur.
+
+### Fixed
+
+- **Project pill now names the project, not the cwd.** `sl_project` derives
+  from `workspace.project_dir` basename (falls back to cwd). Users working
+  inside a subdirectory no longer see the leaf directory name in both the
+  project pill and the subdir-drift info-slot at the same time.
+- **Rate-limit percent is labelled consistently.** All states show
+  `{N}% used`; the previous wording (`78% left` in ok, bare `65%` in warm,
+  `92% left` in crit despite being 92% used) inverted meaning at exactly
+  the moment users needed an accurate read.
+- **Lines segment dropped the redundant net.** `+142 / -38` instead of
+  `↗+104 (+142/-38)`. Non-unicode fallback (arrow == `+` or `-`) drops the
+  sign to avoid `++142 / --38`.
+- **Git ahead/behind use GL_UP / GL_DOWN.** `↑2 ↓1` replaces literal
+  `^2 v1`. Fallback keeps `^`/`v`.
+- **Fork badge is a distinct glyph.** `GL_FORK` (nf-oct-repo_forked,
+  U+F402) no longer duplicates the git-branch icon.
+- **Compact tier truncates long labels.** Project 20 chars, branch 24,
+  agent 20, worktree 20, using `…` (U+2026) as the truncation marker.
+  Long branch names no longer overflow the row.
+- **Info-slot prefixes normalized.** Output-style uses `·`, subdir drift
+  uses `/path` (with internal `…` when truncated), session keeps `@`.
+  The clock fallback is suppressed in classic layouts and only fires on
+  zen row 3.
+- **Info-slot classic fallback moved to session row.** When the slot
+  does fire in classic, it joins the model-adjacent row rather than
+  jamming between branch and duration.
+- **Separator reads as a separator.** `.` ornamental separators in
+  `rate-limit.sh`, `info-slot.sh`, and `rate-limit-7d-stable.sh` become
+  `·` (U+00B7). ASCII fallback keeps `.`.
+- **Braille gauge off-by-one.** `ctx_gauge_render` mapped pct 89-99 to
+  the full-saturation bucket; rounded division (`(pct*8+50)/100`) now
+  puts 95% at the first full reading. Same rounding applied to the
+  burn-rate sparkline.
+- **Compaction countdown at sub-minute projections.** When
+  `_cx_min_to_compact == 0` the suffix is now `compact <1min` instead
+  of silently disappearing.
+- **SGR attribute leak across same-BG segments.** `emit_segment` /
+  `emit_on_muted` / `emit_recessed` emit a full `SL_RST + BG + FG` at
+  every same-BG transition so `bold blink` on a prior segment does not
+  inherit into the next.
+- **Detail suffix state leak.** `_rr_detail` closes with full reset + BG
+  + FG instead of `SL_UNDIM` alone.
+- **Capsule left-cap on recessed-first rows.** `emit_recessed` delegates
+  to `emit_segment` on first-emit so zen's ambient row gets its left cap
+  when `CAP_STYLE=capsule`.
+- **OSC 8 link wraps outside SGR attrs.** The hyperlink escapes bracket
+  the entire padded segment text rather than nesting inside a bold/blink
+  region, matching terminal expectations.
+- **Dash / zsh glyph rendering (correctness fix).** v2.0 shipped glyph
+  definitions as `\xNN` byte escapes. Dash's `printf %b` and zsh's
+  builtin `printf %b` do not interpret `\xNN`; they emitted the raw
+  string `\xee\x82\xb0` instead of the UTF-8 powerline glyph, so users
+  whose `/bin/sh` resolved to dash (most Linux distros) or who invoked
+  the status line under zsh's sh emulation saw a completely broken
+  render. The v2.0 tests passed on both shells only because they
+  checked exit code, not byte content. Converted every glyph escape to
+  `\0NNN` octal, which dash, bash, and zsh builtin all interpret.
+- **7d quota warning now fires in classic too.** `alerts_slot`'s 7d
+  warning was gated to zen layout. Combined with `rate_limit_7d_stable`
+  self-gating below 70%, that left classic users with no 7d signal at
+  exactly the moment it mattered most (>=70% used). Gate dropped so the
+  alert fires in both layouts.
+- **Rate-limit compact tier keeps burn projection on crit.** `burns in
+  Nm ↑` stays on ember+crit in compact tier; only the trailing suffix
+  words (`reset`) drop for space.
+- **Leading space in rate-limit compact.** `_rl_glyph` is defined only
+  for the ember preset, so pill/bar/minimal no longer leak a stray
+  leading space through the compact-tier override.
+
+### Changed
+
+- **7-day rate-limit is always visible in zen ambient row.** Previously
+  self-gated to `< 70%`; in crit cases (>=70%), the alerts-slot on
+  Row 1 is the only surface, and it can be occupied by a higher-priority
+  cache-poor or added-dirs signal. Zen ambient row now renders the stable
+  pill unconditionally, with FG escalation at 70%/85% thresholds. Classic
+  retains the `< 70%` gate (alerts-slot handles crit there) plus a
+  `_sl_cols >= 150` floor so Row 1 does not overflow.
+- **Inline `7d {pct}% used` fragment** in the 5h rate-limit pill is
+  retired; the dedicated `rate_limit_7d_stable` segment owns the 7d
+  signal in both layouts.
+- **Test suite grew snapshot assertions.** `test/run.sh --check` now
+  diffs ANSI-stripped rendered output against `test/snapshots/*.txt`
+  golden files. `--update-snapshots` regenerates them. 126/126 on
+  sh / dash / bash / zsh.
+- **Deterministic test fixtures.** `resets_at` values are now anchored
+  to `TEST_NOW=1800000000` via a new `CLAUDE_STATUSLINE_NOW_OVERRIDE`
+  env var so snapshot diffs do not drift with wall-clock time.
+
+### Added
+
+- **Cherry-pick state detection.** `sl_git_op=CHERRY-PICK` surfaces when
+  `CHERRY_PICK_HEAD` exists, mirroring the existing `MERGING` /
+  `REBASING N/M` overrides.
+- **Defensive orchestrator guards.** `_seg_weight` defaults to
+  `tertiary` if a segment forgets to set it (previously silently
+  dropped); `_seg_attrs` tokenizes on commas as well as whitespace so
+  `"bold,blink"` typos still work.
+- **`sl_truncate` helper.** Shared truncation helper in `render.sh` for
+  segment labels; applied to project, git branch, worktree, agent, and
+  micro-location.
+
 ## [2.0.0] - 2026-04-20
 
 ### Added
@@ -105,5 +214,6 @@ _Nothing yet._
   shared host cannot rewrite the shell code that the status line
   sources back.
 
-[Unreleased]: https://github.com/gfreschi/claude-code-statusline/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/gfreschi/claude-code-statusline/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/gfreschi/claude-code-statusline/releases/tag/v2.0.1
 [2.0.0]: https://github.com/gfreschi/claude-code-statusline/releases/tag/v2.0.0

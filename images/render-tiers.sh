@@ -5,6 +5,10 @@
 # does not exercise.
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
+# Frozen wall clock matches test/run.sh's TEST_NOW so fixture resets_at
+# timestamps produce deterministic time-remaining text across GIF regens.
+export CLAUDE_STATUSLINE_NOW_OVERRIDE=1800000000
+
 mid_json=$(cat "$DIR/test/fixtures/mid.json")
 zen_json=$(cat "$DIR/test/fixtures/zen-full.json")
 

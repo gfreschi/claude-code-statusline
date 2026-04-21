@@ -99,7 +99,11 @@ sl_model_short="${sl_model_name#Claude }"
 [ -z "$sl_model_short" ] && sl_model_short="Claude"
 
 sl_project=""
-[ -n "$sl_cwd" ] && sl_project="${sl_cwd##*/}"
+if [ -n "$sl_project_dir" ]; then
+  sl_project="${sl_project_dir##*/}"
+elif [ -n "$sl_cwd" ]; then
+  sl_project="${sl_cwd##*/}"
+fi
 
 # Refresh git cache
 . "$SL_LIB/cache.sh"
@@ -108,7 +112,11 @@ cache_refresh
 # Memoize the current epoch. Several segments need it for "time until reset"
 # math; without this each one forks `date +%s` independently, which adds up
 # fast under zen's multi-pass layout.
-_sl_now=$(date +%s)
+#
+# CLAUDE_STATUSLINE_NOW_OVERRIDE: test hook that lets fixtures carry
+# absolute resets_at timestamps relative to a fixed epoch, so snapshots do
+# not drift as wall-clock time advances.
+_sl_now="${CLAUDE_STATUSLINE_NOW_OVERRIDE:-$(date +%s)}"
 
 # Push one burn-rate sample per render into the sparkline ring buffer.
 # This MUST happen once per render, not per row group -- segment functions

@@ -11,6 +11,23 @@
 DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$DIR/.." && pwd)"
 
+# Frozen wall clock for rate-limit fixtures. Fixtures carry resets_at values
+# relative to this epoch, so time-remaining math stays deterministic across
+# test runs regardless of when the suite is invoked.
+TEST_NOW=1800000000
+
+# Scrub any CLAUDE_STATUSLINE_* tweaks the developer happened to have in
+# their environment - the test matrix owns layout / theme / caps choices
+# per row and must not inherit from the shell.
+unset CLAUDE_STATUSLINE_LAYOUT
+unset CLAUDE_STATUSLINE_RATE_STYLE
+unset CLAUDE_STATUSLINE_CAP_STYLE
+unset CLAUDE_STATUSLINE_CTX_GAUGE
+unset CLAUDE_STATUSLINE_MINIMAL
+unset CLAUDE_STATUSLINE_SEGMENTS
+unset CLAUDE_STATUSLINE_CONFIG_FILE
+unset CLAUDE_STATUSLINE_NERD_FONT
+
 # --- Bench mode (short-circuits before normal flag parsing) ---
 if [ "${1:-}" = "--bench" ]; then
   # Thresholds calibrated for the v2.0 hot path: jq fixed cost (~25-30ms) +
@@ -23,7 +40,7 @@ if [ "${1:-}" = "--bench" ]; then
   _tot_ms=0
   for _i in 1 2 3 4 5 6 7 8 9 10; do
     _start=$(date +%s%N 2>/dev/null || python3 -c 'import time; print(int(time.time()*1e9))')
-    COLUMNS=150 CLAUDE_STATUSLINE_LAYOUT=zen cat "$DIR/fixtures/zen-full.json" | sh "$PROJECT_ROOT/main.sh" > /dev/null
+    COLUMNS=150 CLAUDE_STATUSLINE_LAYOUT=zen CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" cat "$DIR/fixtures/zen-full.json" | COLUMNS=150 CLAUDE_STATUSLINE_LAYOUT=zen CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" sh "$PROJECT_ROOT/main.sh" > /dev/null
     _end=$(date +%s%N 2>/dev/null || python3 -c 'import time; print(int(time.time()*1e9))')
     _delta_ms=$(( (_end - _start) / 1000000 ))
     _tot_ms=$(( _tot_ms + _delta_ms ))
@@ -54,6 +71,7 @@ _tr_mode="visual"
 _tr_scenario=""
 _tr_theme=""
 _tr_shell="sh"
+_tr_update_snapshots=0
 
 # Parse arguments
 while [ $# -gt 0 ]; do
@@ -62,13 +80,61 @@ while [ $# -gt 0 ]; do
     --scenario) _tr_scenario="$2"; shift 2 ;;
     --theme)    _tr_theme="$2"; shift 2 ;;
     --shell)    _tr_shell="$2"; shift 2 ;;
+    --update-snapshots)
+                _tr_mode="check"; _tr_update_snapshots=1; shift ;;
     *)
       echo "Unknown option: $1" >&2
-      echo "Usage: sh test/run.sh [--check] [--scenario NAME] [--theme NAME] [--shell CMD]" >&2
+      echo "Usage: sh test/run.sh [--check] [--scenario NAME] [--theme NAME] [--shell CMD] [--update-snapshots]" >&2
       exit 1
       ;;
   esac
 done
+
+# Strip ANSI CSI and OSC 8 escapes. Snapshots compare only visible text so
+# theme color differences do not churn the golden files - glyph bytes (nerd
+# vs ascii fallback) still matter and are therefore snapshotted under the
+# default theme + nerd + unicode combo.
+strip_ansi() {
+  # macOS /usr/bin/sed does not understand \x, but it does pass \o33 through
+  # $'\e' via the shell. Use perl where available (present on every macOS
+  # and every standard Linux distro) for cross-shell predictability.
+  perl -pe 's/\e\[[^m]*m//g; s/\e\]8;;[^\a]*\a//g; s/\e\]8;;\a//g'
+}
+
+# Snapshot path for a (scenario, tier) combo. Theme does not affect stripped
+# output; caps do but we only snapshot the default (nerd + unicode on).
+snapshot_path() {
+  printf '%s/snapshots/%s_%s.txt' "$DIR" "$1" "$2"
+}
+
+# Compare `stripped_output` against the snapshot file at `snap_path`.
+# Writes to the snapshot if $_tr_update_snapshots=1. Prints PASS/FAIL/WRITE.
+# Returns 0 for pass/write, 1 for fail.
+assert_snapshot() {
+  _as_label="$1"
+  _as_path="$2"
+  _as_actual="$3"
+  if [ "$_tr_update_snapshots" -eq 1 ]; then
+    mkdir -p "$(dirname "$_as_path")"
+    printf '%s\n' "$_as_actual" > "$_as_path"
+    echo "WRITE [$_as_label] -> $_as_path"
+    return 0
+  fi
+  if [ ! -f "$_as_path" ]; then
+    echo "MISS  [$_as_label]: no snapshot at $_as_path (run with --update-snapshots)"
+    return 1
+  fi
+  _as_expected=$(cat "$_as_path")
+  if [ "$_as_expected" = "$_as_actual" ]; then
+    return 0
+  fi
+  echo "FAIL  [$_as_label]: snapshot mismatch at $_as_path"
+  _as_tmp=$(mktemp 2>/dev/null) || _as_tmp="${TMPDIR:-/tmp}/snap-diff.$$"
+  printf '%s\n' "$_as_actual" > "$_as_tmp"
+  diff -u "$_as_path" "$_as_tmp" 2>/dev/null | head -10
+  rm -f "$_as_tmp"
+  return 1
+}
 
 # --- Visual mode ---
 run_visual() {
@@ -89,7 +155,7 @@ run_visual() {
     for _rv_tier in $TIERS; do
       eval "_rv_cols=\$TIER_COLS_${_rv_tier}"
       echo "--- ${_rv_tier} tier (COLUMNS=${_rv_cols}) ---"
-      echo "$_rv_json" | COLUMNS="$_rv_cols" CLAUDE_STATUSLINE_THEME="$_rv_theme" "$_tr_shell" "$PROJECT_ROOT/main.sh"
+      echo "$_rv_json" | COLUMNS="$_rv_cols" CLAUDE_STATUSLINE_THEME="$_rv_theme" CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" "$_tr_shell" "$PROJECT_ROOT/main.sh"
       echo ""
     done
   done
@@ -121,7 +187,7 @@ run_check() {
         _rc_label="${_rc_theme}/${_rc_scn}/${_rc_tier}"
 
         # Run main.sh and capture output + exit code
-        _rc_output=$(echo "$_rc_json" | COLUMNS="$_rc_cols" CLAUDE_STATUSLINE_THEME="$_rc_theme" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>&1)
+        _rc_output=$(echo "$_rc_json" | COLUMNS="$_rc_cols" CLAUDE_STATUSLINE_THEME="$_rc_theme" CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>&1)
         _rc_exit=$?
 
         # Assert: exit code 0
@@ -172,7 +238,7 @@ run_check() {
       _rc_total=$(( _rc_total + 1 ))
       _rc_label="${_rc_theme}/${_rc_scn}/zen"
 
-      _rc_output=$(echo "$_rc_json" | COLUMNS="$ZEN_COLS" CLAUDE_STATUSLINE_LAYOUT=zen CLAUDE_STATUSLINE_THEME="$_rc_theme" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>&1)
+      _rc_output=$(echo "$_rc_json" | COLUMNS="$ZEN_COLS" CLAUDE_STATUSLINE_LAYOUT=zen CLAUDE_STATUSLINE_THEME="$_rc_theme" CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>&1)
       _rc_exit=$?
 
       if [ "$_rc_exit" -ne 0 ]; then
@@ -199,6 +265,137 @@ run_check() {
       _rc_pass=$(( _rc_pass + 1 ))
     done
   done
+
+  # Snapshot pass: render each scenario x tier with the default theme and
+  # compare the ANSI-stripped output to a golden file. Each render gets its
+  # own SL_CACHE_DIR so the sparkline ring buffer state is deterministic;
+  # otherwise snapshots would churn across shells / runs as the ring
+  # accumulates samples. We PRE-SEED the ring so the braille sparkline
+  # actually emits and T9's bucket math stays under test.
+  _rc_snap_theme="catppuccin-mocha"
+  _rc_snap_seed="100,200,300,400,500,600,700,800"
+
+  # mktemp -d wrapper that fails loudly instead of silently falling through
+  # with SL_CACHE_DIR="" (which cache.sh would happily accept, producing
+  # non-deterministic snapshot state).
+  make_snap_cache() {
+    _ms_dir=$(mktemp -d "${TMPDIR:-/tmp}/sl-snap.XXXXXX" 2>/dev/null) || {
+      echo "FAIL: mktemp -d failed; cannot isolate cache dir for snapshots" >&2
+      exit 1
+    }
+    printf '%s' "$_ms_dir"
+  }
+
+  seed_snap_cache() {
+    mkdir -p "$1"
+    printf '%s\n' "$_rc_snap_seed" > "$1/burn-history"
+  }
+
+  for _rc_scn in $_rc_scenarios; do
+    _rc_fixture="$DIR/fixtures/${_rc_scn}.json"
+    [ -f "$_rc_fixture" ] || continue
+    _rc_json=$(cat "$_rc_fixture")
+    for _rc_tier in $TIERS; do
+      eval "_rc_cols=\$TIER_COLS_${_rc_tier}"
+      _rc_total=$(( _rc_total + 1 ))
+      _rc_label="snap/${_rc_scn}/${_rc_tier}"
+      _rc_snapcache=$(make_snap_cache)
+      seed_snap_cache "$_rc_snapcache"
+      _rc_raw=$(echo "$_rc_json" | COLUMNS="$_rc_cols" CLAUDE_STATUSLINE_THEME="$_rc_snap_theme" CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" SL_CACHE_DIR="$_rc_snapcache" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>/dev/null)
+      rm -rf "$_rc_snapcache"
+      _rc_stripped=$(printf '%s' "$_rc_raw" | strip_ansi)
+      _rc_snap=$(snapshot_path "$_rc_scn" "$_rc_tier")
+      if assert_snapshot "$_rc_label" "$_rc_snap" "$_rc_stripped"; then
+        [ "$_tr_update_snapshots" -eq 0 ] && echo "PASS [$_rc_label]"
+        _rc_pass=$(( _rc_pass + 1 ))
+      else
+        _rc_fail=$(( _rc_fail + 1 ))
+      fi
+    done
+  done
+
+  # Zen-layout snapshot (one per zen fixture).
+  for _rc_scn in $ZEN_SCENARIOS; do
+    if [ -n "$_tr_scenario" ] && [ "$_tr_scenario" != "$_rc_scn" ]; then
+      continue
+    fi
+    _rc_fixture="$DIR/fixtures/${_rc_scn}.json"
+    [ -f "$_rc_fixture" ] || continue
+    _rc_json=$(cat "$_rc_fixture")
+    _rc_total=$(( _rc_total + 1 ))
+    _rc_label="snap/${_rc_scn}/zen"
+    _rc_snapcache=$(make_snap_cache)
+    seed_snap_cache "$_rc_snapcache"
+    _rc_raw=$(echo "$_rc_json" | COLUMNS="$ZEN_COLS" CLAUDE_STATUSLINE_LAYOUT=zen CLAUDE_STATUSLINE_THEME="$_rc_snap_theme" CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" SL_CACHE_DIR="$_rc_snapcache" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>/dev/null)
+    rm -rf "$_rc_snapcache"
+    _rc_stripped=$(printf '%s' "$_rc_raw" | strip_ansi)
+    _rc_snap=$(snapshot_path "$_rc_scn" "zen")
+    if assert_snapshot "$_rc_label" "$_rc_snap" "$_rc_stripped"; then
+      [ "$_tr_update_snapshots" -eq 0 ] && echo "PASS [$_rc_label]"
+      _rc_pass=$(( _rc_pass + 1 ))
+    else
+      _rc_fail=$(( _rc_fail + 1 ))
+    fi
+  done
+
+  # ASCII fallback pass: freeze the non-nerd / non-unicode render so the
+  # arrow-sign collision (lines segment), ellipsis `..`, and powerline `>`
+  # fallback cannot silently regress. Small matrix - one snapshot per
+  # representative scenario, full tier only.
+  for _rc_scn in rate-warming rate-healthy full; do
+    _rc_fixture="$DIR/fixtures/${_rc_scn}.json"
+    [ -f "$_rc_fixture" ] || continue
+    _rc_json=$(cat "$_rc_fixture")
+    _rc_total=$(( _rc_total + 1 ))
+    _rc_label="snap/${_rc_scn}/full-ascii"
+    _rc_snapcache=$(make_snap_cache)
+    seed_snap_cache "$_rc_snapcache"
+    _rc_raw=$(echo "$_rc_json" | COLUMNS="140" CLAUDE_STATUSLINE_THEME="$_rc_snap_theme" CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" CLAUDE_STATUSLINE_NERD_FONT=0 LANG=C LC_ALL=C SL_CACHE_DIR="$_rc_snapcache" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>/dev/null)
+    rm -rf "$_rc_snapcache"
+    _rc_stripped=$(printf '%s' "$_rc_raw" | strip_ansi)
+    _rc_snap=$(printf '%s/snapshots/%s_full-ascii.txt' "$DIR" "$_rc_scn")
+    if assert_snapshot "$_rc_label" "$_rc_snap" "$_rc_stripped"; then
+      [ "$_tr_update_snapshots" -eq 0 ] && echo "PASS [$_rc_label]"
+      _rc_pass=$(( _rc_pass + 1 ))
+    else
+      _rc_fail=$(( _rc_fail + 1 ))
+    fi
+  done
+
+  # OSC 8 hyperlink integration: fixtures use synthetic cwd paths that skip
+  # the git-dir probe in cache.sh, so sl_github_base_url is always empty and
+  # the orchestrator's OSC 8 wrap branch is dead under regular snapshots.
+  # This check runs main.sh against the real project repo so OSC 8 actually
+  # fires, then verifies:
+  #   (a) the output contains a real ESC 0x1b `]8;;` sequence, not the
+  #       ETX 0x03 `3]8;;` pattern that a broken `\0033` format string
+  #       produces (v2.0.1 shipped that bug once);
+  #   (b) no stray ETX bytes appear anywhere in the rendered output.
+  _rc_total=$(( _rc_total + 1 ))
+  _rc_label="osc8/project-root"
+  _rc_osc8_cache=$(make_snap_cache)
+  _rc_osc8_json=$(printf '{"cwd":"%s","model":{"id":"claude-opus-4-7","display_name":"Claude Opus"},"context_window":{"used_percentage":10,"context_window_size":200000},"cost":{"total_duration_ms":120000}}' "$PROJECT_ROOT")
+  _rc_osc8_raw=$(printf '%s' "$_rc_osc8_json" | COLUMNS=130 CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" SL_CACHE_DIR="$_rc_osc8_cache" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>/dev/null)
+  rm -rf "$_rc_osc8_cache"
+  # (a) real ESC + ]8;;
+  if printf '%s' "$_rc_osc8_raw" | grep -q "$(printf '\033]8;;')"; then
+    _rc_osc8_ok_a=1
+  else
+    _rc_osc8_ok_a=0
+  fi
+  # (b) no ETX 0x03 anywhere
+  if printf '%s' "$_rc_osc8_raw" | grep -q "$(printf '\003')"; then
+    _rc_osc8_ok_b=0
+  else
+    _rc_osc8_ok_b=1
+  fi
+  if [ "$_rc_osc8_ok_a" -eq 1 ] && [ "$_rc_osc8_ok_b" -eq 1 ]; then
+    echo "PASS [$_rc_label]"
+    _rc_pass=$(( _rc_pass + 1 ))
+  else
+    echo "FAIL [$_rc_label]: osc8_start=$_rc_osc8_ok_a no_etx=$_rc_osc8_ok_b"
+    _rc_fail=$(( _rc_fail + 1 ))
+  fi
 
   # Sparkline ring-buffer integration: push 100 samples into an isolated cache
   # dir, then verify exactly 8 are retained in insertion order. Guards the
