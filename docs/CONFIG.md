@@ -77,18 +77,22 @@ Two segments rotate conditionally. Each emits only the first match in its priori
 
 1. `cache-poor` -- cache hit ratio `< 70%` and cache reads > 0
 2. `added-dirs` -- at least one directory added via `/add-dir`
-3. `7d-warning` -- zen mode only, and 7d rate used `>= 70%`
+3. `7d-warning` -- 7d rate used `>= 70%` (both classic and zen as of v2.0.1)
 
 When no condition matches, `alerts_slot` emits nothing and leaves the width free.
 
-**`info_slot`** (Row 3 ambient in zen, Row 2 workspace fallback in classic, `min_tier=full`):
+**`info_slot`** (Row 3 ambient in zen, Row 1 session fallback in classic, `min_tier=full`):
 
 1. `output-style` -- `/output-style` is non-default
 2. `subdir` -- cwd is a proper descendant of `project_dir`
 3. `session-name` -- `session_name` is set
-4. `clock` -- always-true fallback
+4. `clock` -- zen-only fallback (suppressed in classic so a floating clock does not land next to workflow segments)
 
-`info_slot` always renders something because of the clock fallback. When nothing else fires, it shows the current time.
+In classic, `info_slot` emits nothing when none of the first three match. In zen, the clock keeps the ambient row non-empty.
+
+**`rate_limit_7d_stable`** (zen: Row 3 ambient, recessed; classic: Row 1 session, tertiary, requires `_sl_cols >= 150`):
+
+Renders `7d {pct}% . {days}d` when 7d used `< 70%`. Above 70% the `alerts_slot` warning handles it.
 
 ## Rate-limit presets
 

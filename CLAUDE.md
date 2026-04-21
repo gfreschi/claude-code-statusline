@@ -170,8 +170,8 @@ Segment groupings:
 
 - `segment_model`, `segment_agent`, `segment_context`, `segment_rate_limit`, `segment_burn_rate`, `segment_alerts_slot` -> `session` group (Row 1)
 - `segment_project`, `segment_git`, `segment_lines`, `segment_worktree`, `segment_duration` -> `workspace` group (Row 2)
-- `segment_info_slot` -> `ambient` group in zen, falls back to `workspace` in classic
-- `segment_rate_limit_7d_stable` -> `ambient` group; self-gates to zen only
+- `segment_info_slot` -> `ambient` group in zen, falls back to `session` in classic (v2.0.1 moved from `workspace`). Clock fallback is zen-only.
+- `segment_rate_limit_7d_stable` -> `ambient` group in zen (recessed). In classic, renders on `session` row (tertiary) when `_sl_cols >= 150`.
 - `segment_micro_location` -> micro-tier only
 
 ### Git State Variables

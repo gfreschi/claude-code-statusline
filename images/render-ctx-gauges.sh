@@ -2,6 +2,10 @@
 # Helper script for VHS: cycles through every CLAUDE_STATUSLINE_CTX_GAUGE style.
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
+# Frozen wall clock matches test/run.sh's TEST_NOW so fixture resets_at
+# timestamps produce deterministic time-remaining text across GIF regens.
+export CLAUDE_STATUSLINE_NOW_OVERRIDE=1800000000
+
 json=$(cat "$DIR/test/fixtures/full.json")
 
 C_RESET=$(printf '\033[0m')
