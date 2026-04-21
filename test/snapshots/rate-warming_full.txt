@@ -1,2 +1,2 @@
-  Opus   ●●○○○ 55% 82k/150k compact ~24min   65% used · 1h45m left │  3.5k tok/min │ +2 dirs │ · Explanatory 
+  Opus   ●●○○○ 55% 82k/150k compact ~24min   65% used · 1h45m left │  3.5k tok/min ⠀⠁⠁⠁⠁⠃⠃⣿ │ +2 dirs │ · Explanatory 
   app │  ↗ +142 / -38 │  34m (api 8m) 

@@ -268,10 +268,18 @@ run_check() {
 
   # Snapshot pass: render each scenario x tier with the default theme and
   # compare the ANSI-stripped output to a golden file. Each render gets its
-  # own SL_CACHE_DIR so the sparkline ring buffer starts empty every time;
+  # own SL_CACHE_DIR so the sparkline ring buffer state is deterministic;
   # otherwise snapshots would churn across shells / runs as the ring
-  # accumulates samples.
+  # accumulates samples. We PRE-SEED the ring so the braille sparkline
+  # actually emits and T9's bucket math stays under test.
   _rc_snap_theme="catppuccin-mocha"
+  _rc_snap_seed="100,200,300,400,500,600,700,800"
+
+  seed_snap_cache() {
+    mkdir -p "$1"
+    printf '%s\n' "$_rc_snap_seed" > "$1/burn-history"
+  }
+
   for _rc_scn in $_rc_scenarios; do
     _rc_fixture="$DIR/fixtures/${_rc_scn}.json"
     [ -f "$_rc_fixture" ] || continue
@@ -281,6 +289,7 @@ run_check() {
       _rc_total=$(( _rc_total + 1 ))
       _rc_label="snap/${_rc_scn}/${_rc_tier}"
       _rc_snapcache=$(mktemp -d "${TMPDIR:-/tmp}/sl-snap.XXXXXX" 2>/dev/null)
+      seed_snap_cache "$_rc_snapcache"
       _rc_raw=$(echo "$_rc_json" | COLUMNS="$_rc_cols" CLAUDE_STATUSLINE_THEME="$_rc_snap_theme" CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" SL_CACHE_DIR="$_rc_snapcache" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>/dev/null)
       rm -rf "$_rc_snapcache"
       _rc_stripped=$(printf '%s' "$_rc_raw" | strip_ansi)
@@ -305,10 +314,35 @@ run_check() {
     _rc_total=$(( _rc_total + 1 ))
     _rc_label="snap/${_rc_scn}/zen"
     _rc_snapcache=$(mktemp -d "${TMPDIR:-/tmp}/sl-snap.XXXXXX" 2>/dev/null)
+    seed_snap_cache "$_rc_snapcache"
     _rc_raw=$(echo "$_rc_json" | COLUMNS="$ZEN_COLS" CLAUDE_STATUSLINE_LAYOUT=zen CLAUDE_STATUSLINE_THEME="$_rc_snap_theme" CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" SL_CACHE_DIR="$_rc_snapcache" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>/dev/null)
     rm -rf "$_rc_snapcache"
     _rc_stripped=$(printf '%s' "$_rc_raw" | strip_ansi)
     _rc_snap=$(snapshot_path "$_rc_scn" "zen")
+    if assert_snapshot "$_rc_label" "$_rc_snap" "$_rc_stripped"; then
+      [ "$_tr_update_snapshots" -eq 0 ] && echo "PASS [$_rc_label]"
+      _rc_pass=$(( _rc_pass + 1 ))
+    else
+      _rc_fail=$(( _rc_fail + 1 ))
+    fi
+  done
+
+  # ASCII fallback pass: freeze the non-nerd / non-unicode render so the
+  # arrow-sign collision (lines segment), ellipsis `..`, and powerline `>`
+  # fallback cannot silently regress. Small matrix - one snapshot per
+  # representative scenario, full tier only.
+  for _rc_scn in rate-warming rate-healthy full; do
+    _rc_fixture="$DIR/fixtures/${_rc_scn}.json"
+    [ -f "$_rc_fixture" ] || continue
+    _rc_json=$(cat "$_rc_fixture")
+    _rc_total=$(( _rc_total + 1 ))
+    _rc_label="snap/${_rc_scn}/full-ascii"
+    _rc_snapcache=$(mktemp -d "${TMPDIR:-/tmp}/sl-snap.XXXXXX" 2>/dev/null)
+    seed_snap_cache "$_rc_snapcache"
+    _rc_raw=$(echo "$_rc_json" | COLUMNS="140" CLAUDE_STATUSLINE_THEME="$_rc_snap_theme" CLAUDE_STATUSLINE_NOW_OVERRIDE="$TEST_NOW" CLAUDE_STATUSLINE_NERD_FONT=0 LANG=C LC_ALL=C SL_CACHE_DIR="$_rc_snapcache" "$_tr_shell" "$PROJECT_ROOT/main.sh" 2>/dev/null)
+    rm -rf "$_rc_snapcache"
+    _rc_stripped=$(printf '%s' "$_rc_raw" | strip_ansi)
+    _rc_snap=$(printf '%s/snapshots/%s_full-ascii.txt' "$DIR" "$_rc_scn")
     if assert_snapshot "$_rc_label" "$_rc_snap" "$_rc_stripped"; then
       [ "$_tr_update_snapshots" -eq 0 ] && echo "PASS [$_rc_label]"
       _rc_pass=$(( _rc_pass + 1 ))

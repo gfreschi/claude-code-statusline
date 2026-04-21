@@ -1,0 +1,2 @@
+ Sonnet 4.6  security-reviewer > ***-- 75% 150k/200k compact ~17min > 2.3k tok/min ___....# >
+ myproject | +80 / -6 | wt:auth-refactor | 1h05m >

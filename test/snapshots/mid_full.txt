@@ -1,2 +1,2 @@
-  Opus 4.6  security-reviewer   ●●○○○ 52% 104k/200k compact ~4min   20.8k tok/min 
+  Opus 4.6  security-reviewer   ●●○○○ 52% 104k/200k compact ~4min   20.8k tok/min ⠀⠀⠀⠀⠀⠀⠀⣿ 
   myproject │  ↗ +56 / -12 │  5m 

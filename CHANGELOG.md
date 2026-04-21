@@ -64,10 +64,20 @@ snapshot tests so these regressions cannot recur.
 - **OSC 8 link wraps outside SGR attrs.** The hyperlink escapes bracket
   the entire padded segment text rather than nesting inside a bold/blink
   region, matching terminal expectations.
-- **Dash / zsh glyph rendering.** All `\xNN` byte escapes in the glyph
-  table converted to `\0NNN` octal, which dash's printf and zsh's
-  builtin printf both interpret. Classic v2.0 tests passed on dash and
-  zsh only because they checked exit code, not byte content.
+- **Dash / zsh glyph rendering (correctness fix).** v2.0 shipped glyph
+  definitions as `\xNN` byte escapes. Dash's `printf %b` and zsh's
+  builtin `printf %b` do not interpret `\xNN`; they emitted the raw
+  string `\xee\x82\xb0` instead of the UTF-8 powerline glyph, so users
+  whose `/bin/sh` resolved to dash (most Linux distros) or who invoked
+  the status line under zsh's sh emulation saw a completely broken
+  render. The v2.0 tests passed on both shells only because they
+  checked exit code, not byte content. Converted every glyph escape to
+  `\0NNN` octal, which dash, bash, and zsh builtin all interpret.
+- **7d quota warning now fires in classic too.** `alerts_slot`'s 7d
+  warning was gated to zen layout. Combined with `rate_limit_7d_stable`
+  self-gating below 70%, that left classic users with no 7d signal at
+  exactly the moment it mattered most (>=70% used). Gate dropped so the
+  alert fires in both layouts.
 - **Rate-limit compact tier keeps burn projection on crit.** `burns in
   Nm ↑` stays on ember+crit in compact tier; only the trailing suffix
   words (`reset`) drop for space.

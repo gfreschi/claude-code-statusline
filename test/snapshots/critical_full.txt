@@ -1,2 +1,2 @@
-  Opus 4.6    CTX! ●●●●○ 96% 192k/200k   1.6k tok/min 
+  Opus 4.6    CTX! ●●●●○ 96% 192k/200k   1.6k tok/min ⠁⠃⠃⠇⠇⠏⠏⣿ 
   myproject │  ↗ +200 / -150 │  wt:auth-refactor │  2h00m 
