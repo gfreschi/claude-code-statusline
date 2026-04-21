@@ -403,10 +403,11 @@ render_row() {
       _rr_icon="${_seg_icon} "
     fi
 
-    # OSC 8 link wrapping (orchestrator applies, not segments)
-    if [ "$SL_CAP_OSC8" -eq 1 ] && [ -n "$_seg_link_url" ]; then
-      _seg_content=$(printf '\033]8;;%s\a%s\033]8;;\a' "$_seg_link_url" "$_seg_content")
-    fi
+    # OSC 8 link wrapping is applied at the end of this block, around the
+    # fully-assembled _rr_text (SGR attrs included). Wrapping the link
+    # *inside* an active bold/blink SGR - which the earlier v2 layout did -
+    # caused some terminals to misinterpret the escape boundaries and fail
+    # to restore attribute state on link exit.
 
     # Attribute handling (bold, blink). Tokenize on both comma and
     # whitespace so `"bold,blink"` (common typo) matches the same tokens
@@ -458,6 +459,12 @@ render_row() {
 
     # Build padded content
     _rr_text=" ${_rr_attr_start}${_rr_icon}${_seg_content}${_rr_detail}${_rr_attr_end} "
+
+    # OSC 8 link wrap: the escape sequences bracket the entire padded text
+    # so any SGR attributes live inside the link rather than straddling it.
+    if [ "$SL_CAP_OSC8" -eq 1 ] && [ -n "$_seg_link_url" ]; then
+      _rr_text=$(printf '\033]8;;%s\a%s\033]8;;\a' "$_seg_link_url" "$_rr_text")
+    fi
 
     # Emit based on weight
     case "$_seg_weight" in
