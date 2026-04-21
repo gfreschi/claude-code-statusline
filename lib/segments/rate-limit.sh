@@ -118,15 +118,9 @@ segment_rate_limit() {
       ;;
   esac
 
-  # 7d inline for ember/minimal+warm in classic layout. Zen has a dedicated
-  # Row 3 segment for 7d so the extra inline signal would be redundant there.
-  if [ "$_rl_state" = "warm" ] && [ "$_sl_layout" != "zen" ] \
-    && { [ "$_rl_style" = "ember" ] || [ "$_rl_style" = "minimal" ]; }; then
-    to_int _rl_7d "$sl_rate_7d_pct" -1
-    if [ "$_rl_7d" -ge 50 ]; then
-      _seg_content="${_seg_content} ${GL_SEP} 7d ${_rl_7d}% used"
-    fi
-  fi
+  # Note: classic layouts get the 7d signal from the dedicated
+  # segment_rate_limit_7d_stable (session row, tertiary). Zen gets it on
+  # Row 3 (ambient). No inline 7d fragment here.
 
   # Compact tier: drop the "left"/"reset" suffix words for space, but keep
   # the burn-in projection on ember+crit - that is the most actionable

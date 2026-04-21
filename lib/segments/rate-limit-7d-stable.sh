@@ -1,11 +1,12 @@
 #!/bin/sh
-# segments/rate-limit-7d-stable.sh -- 7d rate-limit stable pill (zen Row 3 only)
-# Self-gates on $_sl_layout and 7d threshold. Returns non-zero outside zen
-# or when 7d >= 70% (that case is handled by segment_alerts_slot).
+# segments/rate-limit-7d-stable.sh -- 7d rate-limit stable pill
+#
+# Zen: renders on Row 3 (ambient, recessed) as the slow-moving quota signal.
+# Classic: renders on Row 1 (session, tertiary) so classic users do not lose
+# 7d visibility just because they are not in zen layout.
+# Both: self-gates when >= 70% (alerts_slot handles the warning band).
 
 segment_rate_limit_7d_stable() {
-  [ "$_sl_layout" != "zen" ] && return 1
-
   [ -z "$sl_rate_7d_pct" ] && return 1
   to_int _r7_pct "$sl_rate_7d_pct" -1
   [ "$_r7_pct" -lt 0 ] && return 1
@@ -24,13 +25,25 @@ segment_rate_limit_7d_stable() {
     _r7_days="?"
   fi
 
-  _seg_weight="recessed"
-  _seg_min_tier="zen"
-  _seg_group="ambient"
-  _seg_group_fallback=""   # does not render in classic
   _seg_icon=""
   _seg_attrs=""
   _seg_content="7d ${_r7_pct}% ${GL_SEP} ${_r7_days}d"
+
+  if [ "$_sl_layout" = "zen" ]; then
+    _seg_weight="recessed"
+    _seg_min_tier="zen"
+    _seg_group="ambient"
+    _seg_group_fallback=""
+  else
+    # Classic: session row as tertiary. Require >=150 cols so we do not
+    # overflow row 1 on tighter terminals (rate-5h + burn-rate + alerts +
+    # 7d easily adds up past 140 in the warm band).
+    [ "${_sl_cols:-0}" -lt 150 ] && return 1
+    _seg_weight="tertiary"
+    _seg_min_tier="full"
+    _seg_group="session"
+    _seg_group_fallback=""
+  fi
 
   # Minimalist override: drop word label
   if [ "${CLAUDE_STATUSLINE_MINIMAL:-0}" = "1" ]; then
