@@ -206,7 +206,7 @@ Current priorities (canonical):
 
 When authoring a new slot, document the full priority order in the file header and match the existing `_is_hit` pattern so the behaviour stays easy to audit.
 
-See [`CLAUDE.md`](CLAUDE.md) for the full segment contract, metadata variable reference, and variable naming conventions.
+See [`AGENTS.md`](AGENTS.md) for the full segment contract, metadata variable reference, and variable naming conventions.
 
 ---
 
@@ -367,4 +367,4 @@ CLAUDE_STATUSLINE_THEME=my-theme SL_DIR=. SL_LIB=./lib sh -c '. ./lib/theme.sh
 
 Segments must set `_seg_content` as **plain text** - no ANSI escapes. The orchestrator handles all color and formatting. Use `_seg_link_url` for OSC 8 hyperlinks.
 
-See [`CLAUDE.md`](CLAUDE.md) for the complete architecture reference.
+See [`AGENTS.md`](AGENTS.md) for the complete architecture reference.

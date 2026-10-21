@@ -46,7 +46,7 @@ None.
 - [ ] No bashisms (`[[ ]]`, `local`, `declare`, arrays, process substitution)
 - [ ] `sh test/run.sh --check` passes on sh / dash / bash / zsh (**101 / 101** each)
 - [ ] `sh test/run.sh --bench` still under the macOS (100 ms) / Linux (60 ms) threshold
-- [ ] New env vars / segments / themes documented in `docs/CONFIG.md`, `README.md`, and `CLAUDE.md` where applicable
+- [ ] New env vars / segments / themes documented in `docs/CONFIG.md`, `README.md`, and `AGENTS.md` where applicable
 - [ ] `CHANGELOG.md` has an `[Unreleased]` entry (or the change is purely internal / refactor-only)
 - [ ] GIFs under `images/` are refreshed if the visual output changed
 - [ ] Commits follow Conventional Commits (`feat:`, `fix:`, `perf:`, `docs:`, `test:`, `chore:`, ...)

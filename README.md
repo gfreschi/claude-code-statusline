@@ -43,6 +43,8 @@ sh ~/.claude/statusline/install.sh uninstall   # remove completely
 git clone https://github.com/gfreschi/claude-code-statusline.git ~/.claude/statusline
 ```
 
+If you develop the statusline, the checkout can live elsewhere as long as `~/.claude/statusline` is a symlink to it.
+
 Add to `~/.claude/settings.json`:
 
 ```json
@@ -159,7 +161,7 @@ Every `CLAUDE_STATUSLINE_*` variable is honored. The file is sourced as POSIX sh
 
 `main.sh` receives JSON from Claude Code via stdin, extracts fields with a single `jq` call, and outputs ANSI-colored Powerline rows. Git state is cached with a 5s TTL to avoid lag on large repos. The entire thing is POSIX `sh`: works with `sh`, `dash`, `bash`, and `zsh`.
 
-See [CLAUDE.md](CLAUDE.md) for the full architecture reference.
+See [AGENTS.md](AGENTS.md) for the full architecture reference.
 
 ## Contributing
 

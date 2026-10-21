@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code and other AI assistants when working with this codebase. It also serves as architecture documentation for human contributors.
+This file provides guidance to AI coding agents working in this repository. It also serves as architecture documentation for human contributors.
 
 ## Project Overview
 
@@ -57,7 +57,7 @@ Determined by `$COLUMNS` and `$CLAUDE_STATUSLINE_LAYOUT` at runtime:
 | Compact | 80-119 | 1 | Model + context + project + git + duration |
 | Micro | < 80 | 1 | Abbreviated model + ctx% + project/branch pill |
 
-Zen mode only activates when both conditions hold. If `LAYOUT=zen` is set but width is below 140, the status line falls back to Full/Compact/Micro as usual.
+Zen needs both `LAYOUT=zen` and width >= 140; otherwise it falls back to Full/Compact/Micro.
 
 ### Segment Contract
 
@@ -102,7 +102,7 @@ Row caps (first-segment left edge, last-segment right edge) are Powerline triang
 
 ### Theme System
 
-Themes define 12 `PALETTE_*` variables. `derive.sh` maps them to ~30 `C_*` semantic tokens. Themes can override any `C_*` token directly for fine-tuning.
+Themes define 12 `PALETTE_*` variables. `derive.sh` maps them to ~30 `C_*` semantic tokens; themes can override any `C_*` directly.
 
 **12 required palette variables:**
 `PALETTE_BG`, `PALETTE_FG`, `PALETTE_BG_ALT`, `PALETTE_BG_DIM`, `PALETTE_BLUE`, `PALETTE_GOLD`, `PALETTE_GREEN`, `PALETTE_CYAN`, `PALETTE_RED`, `PALETTE_ORANGE`, `PALETTE_MAGENTA`, `PALETTE_DIM`
@@ -126,17 +126,16 @@ Themes define 12 `PALETTE_*` variables. `derive.sh` maps them to ~30 `C_*` seman
 
 **Runtime state variables added in v2** (set by `main.sh`, read by segments):
 
+JSON sources are listed under "JSON Input Schema" below.
+
 | Variable | Type | Source |
 |----------|------|--------|
-| `sl_rate_5h_pct` | integer 0-100 or empty | `.rate_limits.five_hour.used_percentage` |
-| `sl_rate_5h_reset_ts` | unix epoch seconds or empty | `.rate_limits.five_hour.resets_at` |
-| `sl_rate_7d_pct` | integer 0-100 or empty | `.rate_limits.seven_day.used_percentage` |
-| `sl_rate_7d_reset_ts` | unix epoch seconds or empty | `.rate_limits.seven_day.resets_at` |
-| `sl_output_style` | string or empty | `.output_style.name` |
-| `sl_session_name` | string or empty | `.session_name` |
-| `sl_added_dirs_count` | integer >= 0 | `length` of `.workspace.added_dirs` |
-| `sl_api_duration_ms` | integer or empty | `.cost.total_api_duration_ms` |
-| `sl_project_dir` | string or empty | `.workspace.project_dir` (falls back to `.cwd`) |
+| `sl_rate_5h_pct`, `sl_rate_7d_pct` | integer 0-100 or empty | JSON schema |
+| `sl_rate_5h_reset_ts`, `sl_rate_7d_reset_ts` | unix epoch seconds or empty | JSON schema |
+| `sl_output_style`, `sl_session_name` | string or empty | JSON schema |
+| `sl_added_dirs_count` | integer >= 0 | JSON schema |
+| `sl_api_duration_ms` | integer or empty | JSON schema |
+| `sl_project_dir` | string or empty | JSON schema |
 | `sl_project` | string or empty | basename of `sl_project_dir` (falls back to basename of `sl_cwd`). v2.0.1 moved this off the cwd basename so the project pill names the project root, not the current subdirectory. |
 | `_sl_layout` | `classic` or `zen` | validated env var `CLAUDE_STATUSLINE_LAYOUT` |
 
@@ -184,23 +183,22 @@ Set by `cache.sh` via `cache_refresh`. Available to segments:
 ## Coding Conventions
 
 - **POSIX sh only.** No bashisms (`[[ ]]`, arrays, `local`, process substitution). Test with `sh -n`.
-- **No ANSI in segments.** Segments set `_seg_content` as plain text. The orchestrator handles all color/formatting.
-- **Prefix all local variables** with `_xx_` where `xx` is a 2-3 letter function abbreviation to avoid collisions. POSIX sh has no `local` keyword, so all variables are global -- prefixing prevents accidental overwrites.
+- **No ANSI in segments** (see Segment Contract).
+- **Prefix all local variables** with `_xx_` where `xx` is a 2-3 letter function abbreviation. POSIX sh has no `local`, so all variables are global; prefixing prevents overwrites.
 - **Use `${VAR:-default}` pattern** in derive.sh so themes can override any token.
 - **`set -f`** is active in main.sh (globbing disabled). Temporarily re-enable with `set +f` if needed.
-- **Never rely on `$(( x + 0 )) 2>/dev/null || x=default` to guard arithmetic.** Under `dash` a parse error in `$(( ))` (e.g. when `x="52.5"` — Claude Code emits floats) aborts the shell with exit 2; the `2>/dev/null || ...` fallback is a parse-time error, not a runtime one, and never runs. Use the `to_int` helper in `lib/render.sh` instead: `to_int _var "$sl_value" 0` — it floors floats and replaces non-integer strings with the default. All v2 segments follow this pattern.
+- **Never rely on `$(( x + 0 )) 2>/dev/null || x=default` to guard arithmetic.** Under `dash` a parse error in `$(( ))` (e.g. when `x="52.5"` - Claude Code emits floats) aborts the shell with exit 2; the `2>/dev/null || ...` fallback is a parse-time error, not a runtime one, and never runs. Use the `to_int` helper in `lib/render.sh` instead: `to_int _var "$sl_value" 0` - it floors floats and replaces non-integer strings with the default. All v2 segments follow this pattern.
 - **Cache file security:** String values written to cache files must use single-quote escaping to prevent shell injection when the cache is sourced. Numeric values use `printf '%d'` which sanitizes to digits.
-- **Control-character sanitization** happens at the `jq` extraction boundary in `main.sh` (via `gsub("[[:cntrl:]]"; "")` on string fields) and in `cache.sh` before writing git-sourced strings to the cache file. Segments can trust that `sl_*` variables are free of ESC / BEL / other C0 bytes, so rendered output cannot be spoofed by an attacker who controls a git branch name, repo path, or session name.
-- **Side-effect-having work runs once per render, not per row group.** The render orchestrator iterates segments three times in zen (one pass per row group). Segments with side effects — e.g. `sparkline_push` — must live in `main.sh` (called once after `cache_refresh`) rather than inside a segment function, otherwise they execute N× per render and corrupt any ring-buffer they maintain.
+- **Control-character sanitization** happens at the `jq` extraction boundary in `main.sh` (via `gsub("[[:cntrl:]]"; "")` on string fields) and in `cache.sh` before writing git-sourced strings to the cache file. Segments can trust that `sl_*` variables are free of ESC / BEL / other C0 bytes, so a hostile git branch name, repo path, or session name cannot spoof output.
+- **Side-effect-having work runs once per render, not per row group.** The render orchestrator iterates segments three times in zen (one pass per row group). Segments with side effects - e.g. `sparkline_push` - must live in `main.sh` (called once after `cache_refresh`) rather than inside a segment function, otherwise they execute Nx per render and corrupt any ring-buffer they maintain.
 - **Glyph escapes use `\0NNN` octal, not `\xNN` hex.** Dash's `printf %b` and zsh's builtin `printf %b` do not honor `\xNN`. Every glyph byte sequence in `lib/render.sh` is declared as `\0NNN` (leading zero required so zsh parses it as octal).
-- **`\033` vs `\0033` — format string vs `%b` argument.** Strings stored in `sl_row` and later emitted via `printf '%b\n'` in `main.sh` use `\0033[` (the leading zero matters for zsh). But anything passed directly to a `printf 'format'` call (e.g. OSC 8 link wrapping in `render_row`) must use `\033]` — format-string `\NNN` parsing is greedy over 1-3 octal digits, so `\0033]` would parse as `\003` + `3]` and emit ETX + garbage.
-- **Truncate long labels via `sl_truncate`.** `render.sh` exposes `sl_truncate _out_var "$text" max_len` which cuts to `(max_len - 1)` bytes + `$GL_ELLIPSIS`. Used by project/git/worktree/agent/micro-location. Note: byte-indexed (may cut mid-codepoint on UTF-8 labels — acceptable for user-supplied branch / directory names).
+- **`\033` vs `\0033` - format string vs `%b` argument.** Strings stored in `sl_row` and later emitted via `printf '%b\n'` in `main.sh` use `\0033[` (the leading zero matters for zsh). But anything passed directly to a `printf 'format'` call (e.g. OSC 8 link wrapping in `render_row`) must use `\033]` - format-string `\NNN` parsing is greedy over 1-3 octal digits, so `\0033]` would parse as `\003` + `3]` and emit ETX + garbage.
+- **Truncate long labels via `sl_truncate`.** `render.sh` exposes `sl_truncate _out_var "$text" max_len` which cuts to `(max_len - 1)` bytes + `$GL_ELLIPSIS`. Used by project/git/worktree/agent/micro-location. Note: byte-indexed (may cut mid-codepoint on UTF-8 labels - acceptable for user-supplied branch / directory names).
 
 ## Testing
 
 ```sh
-# Run a scenario (minimal, mid, full, critical, rate-healthy, rate-warming,
-# rate-critical, rate-float, zen-full) across all tiers:
+# Run a scenario (see test/fixtures) across all tiers:
 sh test/run.sh --scenario full
 
 # Specify a theme:
@@ -217,9 +215,9 @@ sh test/run.sh --check --shell dash
 
 # Regenerate snapshot golden files after an intentional visual change:
 sh test/run.sh --update-snapshots
-# Snapshots live at test/snapshots/<scenario>_<tier>.txt (ANSI-stripped)
-# plus 3 ASCII-fallback variants (<scenario>_full-ascii.txt) and 1 OSC 8
-# assertion that renders against the real project repo.
+# Snapshots: test/snapshots/<scenario>_<tier>.txt (ANSI-stripped), 3
+# ASCII-fallback variants (<scenario>_full-ascii.txt), 1 OSC 8 assertion
+# rendered against the real project repo.
 
 # Benchmark (10-run average of zen-full, fails if over threshold):
 sh test/run.sh --bench
@@ -230,27 +228,21 @@ find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 -I{} sh -c 'sh -n "
 # Deterministic time for tests / GIF regens. test/run.sh and every
 # images/render-*.sh export CLAUDE_STATUSLINE_NOW_OVERRIDE=1800000000
 # (the TEST_NOW baseline). Fixtures carry resets_at as TEST_NOW + offset
-# (e.g. warming 5h reset -> 1800006300) so time-remaining text is stable
-# across runs. When authoring a new rate_limits fixture, use the same
-# baseline.
+# (e.g. warming 5h reset -> 1800006300). New rate_limits fixtures use it too.
 
 # Check for bashisms:
 grep -rn '\[\[' --include='*.sh' .
 grep -rn '^[[:space:]]*local ' --include='*.sh' .
 
-# Visually inspect the v2 env-var matrix (each var toggles one dimension):
-COLUMNS=150 CLAUDE_STATUSLINE_LAYOUT=zen        cat test/fixtures/zen-full.json      | sh main.sh
-COLUMNS=130 CLAUDE_STATUSLINE_RATE_STYLE=bar    cat test/fixtures/rate-warming.json  | sh main.sh
-COLUMNS=130 CLAUDE_STATUSLINE_RATE_STYLE=pill   cat test/fixtures/rate-warming.json  | sh main.sh
-COLUMNS=130 CLAUDE_STATUSLINE_RATE_STYLE=minimal cat test/fixtures/rate-warming.json | sh main.sh
-COLUMNS=130 CLAUDE_STATUSLINE_CTX_GAUGE=blocks  cat test/fixtures/full.json          | sh main.sh
-COLUMNS=130 CLAUDE_STATUSLINE_CTX_GAUGE=braille cat test/fixtures/full.json          | sh main.sh
-COLUMNS=130 CLAUDE_STATUSLINE_CTX_GAUGE=pips    cat test/fixtures/full.json          | sh main.sh
-COLUMNS=130 CLAUDE_STATUSLINE_CAP_STYLE=capsule cat test/fixtures/full.json          | sh main.sh
-COLUMNS=130 CLAUDE_STATUSLINE_MINIMAL=1         cat test/fixtures/full.json          | sh main.sh
-COLUMNS=130 CLAUDE_STATUSLINE_SEGMENTS=model,context,git,duration \
-                                                cat test/fixtures/full.json          | sh main.sh
-CLAUDE_STATUSLINE_CONFIG_FILE=/tmp/cfg.sh       cat test/fixtures/full.json          | sh main.sh
+# Visually inspect the v2 env-var matrix (each var toggles one dimension).
+# Pattern: COLUMNS=130 <VAR=value> sh main.sh < test/fixtures/<fixture>.json
+#   CLAUDE_STATUSLINE_LAYOUT=zen (COLUMNS=150, zen-full)
+#   CLAUDE_STATUSLINE_RATE_STYLE=bar|pill|minimal (rate-warming)
+#   CLAUDE_STATUSLINE_CTX_GAUGE=blocks|braille|pips (full)
+#   CLAUDE_STATUSLINE_CAP_STYLE=capsule, CLAUDE_STATUSLINE_MINIMAL=1 (full)
+#   CLAUDE_STATUSLINE_SEGMENTS=model,context,git,duration (full)
+#   CLAUDE_STATUSLINE_CONFIG_FILE=/tmp/cfg.sh (full)
+COLUMNS=130 CLAUDE_STATUSLINE_RATE_STYLE=bar sh main.sh < test/fixtures/rate-warming.json
 
 # Validate all semantic tokens for a theme:
 CLAUDE_STATUSLINE_THEME=dracula SL_DIR=. SL_LIB=./lib sh -c '. ./lib/theme.sh
@@ -273,11 +265,10 @@ CLAUDE_STATUSLINE_THEME=dracula SL_DIR=. SL_LIB=./lib sh -c '. ./lib/theme.sh
    - `workspace` (Row 2): repo / cwd context
    - `ambient` (Row 3 in zen only): recessed supplemental info
 4. If the segment belongs in `ambient` but should still appear in classic mode, also set `_seg_group_fallback=session` or `_seg_group_fallback=workspace`. Leave it empty to hide the segment outside zen.
-5. Set `_seg_min_tier` to the narrowest tier that should still render it (`micro`, `compact`, `full`). Use `zen` as a readability hint only and self-gate inside the function (`[ "$_sl_layout" != "zen" ] && return 1`).
+5. Set `_seg_min_tier` to the narrowest tier that should still render it (`micro`, `compact`, `full`). For zen-only, self-gate (`[ "$_sl_layout" != "zen" ] && return 1`).
 6. Add `segment_my_segment` to `SL_SEGMENTS` in `main.sh` at the desired position
-7. Run `sh -n lib/segments/my-segment.sh` to verify syntax
-8. Run `sh test/run.sh --scenario full` to verify rendering
-9. If the segment displays a user-supplied label (branch, project, agent name): cap it with `sl_truncate _var "$raw" N`. See `lib/segments/project.sh` or `agent.sh` for examples. Full tier leaves labels unabbreviated; compact/micro tiers truncate.
+7. Run `sh -n lib/segments/my-segment.sh`, then `sh test/run.sh --scenario full`
+8. If the segment displays a user-supplied label (branch, project, agent name): cap it with `sl_truncate _var "$raw" N` (see `lib/segments/project.sh`). Full tier leaves labels unabbreviated; compact/micro tiers truncate.
 
 ## Adding a New Theme
 
@@ -289,50 +280,50 @@ CLAUDE_STATUSLINE_THEME=dracula SL_DIR=. SL_LIB=./lib sh -c '. ./lib/theme.sh
 
 ## Design Decisions
 
-- **Catppuccin Mocha as default:** Most widely adopted terminal theme across modern emulators. Industry standard for open source.
-- **Project segment demoted to secondary:** Project name rarely changes within a session, so it doesn't need a colored primary BG. Grouping it with git on muted BG creates a cohesive "workspace" zone.
+- **Catppuccin Mocha as default:** Most widely adopted terminal theme across modern emulators.
+- **Project segment demoted to secondary:** Project name rarely changes within a session, so it needs no colored primary BG. Grouping it with git on muted BG creates a cohesive "workspace" zone.
 - **Duration changes weight by tier:** Recessed (dim BG) in full tier for ambient info. Tertiary (muted BG) in compact tier to save the visual step.
-- **Agent shares model BG:** Thin pipe separator (same-BG rule) makes it feel like an extension of the model segment rather than a separate block.
+- **Agent shares model BG:** Thin pipe separator (same-BG rule) makes it feel like an extension of the model segment.
 - **Micro-location replaces project+git in micro tier:** Dedicated merged pill with truncation keeps micro under 50 chars.
 - **`_seg_attrs` for bold/blink:** Segments declare text attributes as metadata. The orchestrator applies and resets ANSI -- segments never embed escapes.
-- **No `set -e`:** Intentionally omitted. A status line should degrade gracefully to partial output on errors rather than producing no output at all. Individual failures (e.g., missing git, broken JSON) result in skipped segments, not a blank line.
-- **Single `jq` call:** All JSON fields are extracted in one `jq` invocation with `@sh` quoting and `eval`. This avoids spawning multiple `jq` processes (one per field) which would add noticeable latency to every status line render.
-- **Git cache with TTL:** Git operations are cached for 5 seconds in a per-user temp directory. Without caching, running `git status`, `git stash list`, etc. on every render would cause visible lag, especially on large repositories.
-- **Zen inherits full's segments:** The tier gate in `render_row` is hierarchical, not flat — a segment with `_seg_min_tier="full"` also renders in zen. Without this, zen would ship as strictly less content than full (it would strip burn-rate, alerts-slot, info-slot, lines, worktree). The gate reads: `zen)` needs exactly zen; `full)` needs zen or full; `compact)` needs anything but micro; `micro)` always.
+- **No `set -e`:** Intentionally omitted. A status line should degrade gracefully to partial output rather than none. Individual failures (e.g., missing git, broken JSON) skip segments, not blank the line.
+- **Single `jq` call:** All JSON fields are extracted in one `jq` invocation with `@sh` quoting and `eval`, avoiding one `jq` process per field and its latency.
+- **Git cache with TTL:** Git operations are cached for 5 seconds in a per-user temp directory, so `git status`, `git stash list`, etc. do not run on every render.
+- **Zen inherits full's segments:** The tier gate in `render_row` is hierarchical, not flat - a segment with `_seg_min_tier="full"` also renders in zen. Without this, zen would ship as strictly less content than full (it would strip burn-rate, alerts-slot, info-slot, lines, worktree). The gate reads: `zen)` needs exactly zen; `full)` needs zen or full; `compact)` needs anything but micro; `micro)` always.
 - **Adaptive slots over always-on segments:** v2 replaced always-on `cache_stats` with the `alerts_slot` + `info_slot` architecture. Slots emit only the first priority match (or nothing). This keeps the line cleaner when nothing interesting is happening and surfaces only actionable state when it is.
-- **Benchmark thresholds are regression guards, not targets.** The `--bench` threshold (100ms macOS / 60ms Linux) reflects the current hot path: jq fixed cost (~25-30ms) + three segment passes in zen + git cache refresh. If you change those thresholds, do it deliberately after a perf pass — the numbers exist to catch regressions, not to justify current overhead.
+- **Benchmark thresholds are regression guards, not targets.** The `--bench` threshold (100ms macOS / 60ms Linux) reflects the current hot path: jq fixed cost (~25-30ms) + three segment passes in zen + git cache refresh. Change thresholds only deliberately after a perf pass.
 
 ## JSON Input Schema
 
 Claude Code sends JSON via stdin. Key fields extracted by `main.sh`:
 
 ```
-.cwd (fallback .workspace.current_dir)        -> sl_cwd
-.model.id                                     -> sl_model_id
-.model.display_name                           -> sl_model_name
-.context_window.used_percentage               -> sl_used_pct
-.context_window.context_window_size           -> sl_ctx_size
-.context_window.current_usage.input_tokens    -> sl_input_tokens
-.context_window.current_usage.output_tokens   -> sl_output_tokens
+.cwd (fallback .workspace.current_dir) -> sl_cwd
+.model.id -> sl_model_id
+.model.display_name -> sl_model_name
+.context_window.used_percentage -> sl_used_pct
+.context_window.context_window_size -> sl_ctx_size
+.context_window.current_usage.input_tokens -> sl_input_tokens
+.context_window.current_usage.output_tokens -> sl_output_tokens
 .context_window.current_usage.cache_creation_input_tokens -> sl_cache_create_tokens
-.context_window.current_usage.cache_read_input_tokens     -> sl_cache_read_tokens
-.context_window.total_input_tokens            -> sl_total_input_tokens
-.context_window.total_output_tokens           -> sl_total_output_tokens
-.cost.total_duration_ms                       -> sl_duration_ms
-.cost.total_api_duration_ms                   -> sl_api_duration_ms
-.cost.total_lines_added                       -> sl_lines_added
-.cost.total_lines_removed                     -> sl_lines_removed
-.worktree.name                                -> sl_worktree_name
-.agent.name                                   -> sl_agent_name
-.exceeds_200k_tokens                          -> sl_exceeds_200k
-.rate_limits.five_hour.used_percentage        -> sl_rate_5h_pct
-.rate_limits.five_hour.resets_at              -> sl_rate_5h_reset_ts
-.rate_limits.seven_day.used_percentage        -> sl_rate_7d_pct
-.rate_limits.seven_day.resets_at              -> sl_rate_7d_reset_ts
-.output_style.name                            -> sl_output_style
-.session_name                                 -> sl_session_name
-(.workspace.added_dirs | length)              -> sl_added_dirs_count
-.workspace.project_dir (fallback .cwd)        -> sl_project_dir
+.context_window.current_usage.cache_read_input_tokens -> sl_cache_read_tokens
+.context_window.total_input_tokens -> sl_total_input_tokens
+.context_window.total_output_tokens -> sl_total_output_tokens
+.cost.total_duration_ms -> sl_duration_ms
+.cost.total_api_duration_ms -> sl_api_duration_ms
+.cost.total_lines_added -> sl_lines_added
+.cost.total_lines_removed -> sl_lines_removed
+.worktree.name -> sl_worktree_name
+.agent.name -> sl_agent_name
+.exceeds_200k_tokens -> sl_exceeds_200k
+.rate_limits.five_hour.used_percentage -> sl_rate_5h_pct
+.rate_limits.five_hour.resets_at -> sl_rate_5h_reset_ts
+.rate_limits.seven_day.used_percentage -> sl_rate_7d_pct
+.rate_limits.seven_day.resets_at -> sl_rate_7d_reset_ts
+.output_style.name -> sl_output_style
+.session_name -> sl_session_name
+(.workspace.added_dirs | length) -> sl_added_dirs_count
+.workspace.project_dir (fallback .cwd) -> sl_project_dir
 ```
 
 All fields are optional. Missing fields default to empty strings (or `0` for `sl_added_dirs_count`). Segments skip rendering when their required inputs are absent.
